@@ -1,7 +1,20 @@
+/*
+  Intention: This tool helps us map pixel coordinates on the log sheet PDF for fields and grid positions.
+  We visually click where each field should be drawn and export a coordinates map for use by PdfOverlayPage.
+
+  High-level responsibilities:
+  - Load the log sheet template on a canvas using PDF.js.
+  - Let the user select a field name, then click on the PDF to capture its (x, y).
+  - Support zoom/pan to precisely place markers.
+  - Export results as JSON and TypeScript for downstream consumption.
+
+  Linting note: keep console logs for mapping/debugging; allow 'any' for pdf.js objects.
+*/
+/* eslint-disable no-console, @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Set up PDF.js worker - use local worker file to avoid CORS issues
+// Intention: Point PDF.js to a local worker to avoid CORS issues in dev
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 interface PdfCoordinateMapperProps {
@@ -9,6 +22,7 @@ interface PdfCoordinateMapperProps {
 }
 
 export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoordinatesFound }) => {
+  // Intention: Track current mapping state (which field is active, zoom/pan, history for undo)
   const [coordinates, setCoordinates] = useState<Record<string, { x: number; y: number }>>({});
   const [currentField, setCurrentField] = useState<string>('');
   const [pdfLoaded, setPdfLoaded] = useState(false);
@@ -110,7 +124,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
     'restartNote'
   ];
 
-  // Load PDF
+  // Intention: Load and render page 1 of the template as our positioning background
   useEffect(() => {
     const loadPdf = async () => {
       try {
@@ -199,7 +213,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
     loadPdf();
   }, []);
 
-  // Draw coordinate overlays
+  // Intention: Whenever coordinates or view transforms change, redraw markers on top of the canvas
   useEffect(() => {
     if (!pdfLoaded) return;
 
@@ -215,6 +229,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
     }
   }, [coordinates, pdfLoaded, zoom, panOffset]);
 
+  // Intention: Render red dot + label for every saved field coordinate, respecting zoom/pan
   const drawCoordinateMarkers = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
     // Apply zoom and pan transformations
     ctx.save();
@@ -238,6 +253,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
     ctx.restore();
   };
 
+  // Intention: Convert a click on the canvas into PDF coordinate space and save it under the selected field
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!currentField || !pdfLoaded) return;
 
@@ -274,6 +290,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
     setCurrentField('');
   };
 
+  // Intention: Send mapped coordinates to parent and also copy them to clipboard for easy reuse
   const exportCoordinates = () => {
     console.log('PDF Coordinates:', coordinates);
     onCoordinatesFound(coordinates);
@@ -285,6 +302,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
   };
 
   // Generate downloadable files for coordinates.json and coordinates.ts
+  // Intention: Provide local downloads for coordinates.json and coordinates.ts for versioning/checkout
   const saveCoordinatesFiles = () => {
     const coordJson = JSON.stringify(coordinates, null, 2);
 
@@ -315,7 +333,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
     URL.revokeObjectURL(tsUrl);
   };
 
-  // Auto-save when all fields are mapped
+  // Intention: If user completes the full set of fields, auto-save to reduce clicks
   useEffect(() => {
     const total = fields.length;
     const mapped = Object.keys(coordinates).length;
@@ -324,6 +342,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
     }
   }, [coordinates]);
 
+  // Intention: Reset all recorded coordinates and visual overlays
   const clearCoordinates = () => {
     setCoordinates({});
     setCoordinateHistory([]);
@@ -331,6 +350,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
     clearCanvasOverlays();
   };
 
+  // Intention: Wipe markers and redraw the base PDF when clearing
   const clearCanvasOverlays = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -358,6 +378,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
     }
   };
 
+  // Intention: Step back to last snapshot of coordinates for quick correction
   const undoLastAction = () => {
     if (coordinateHistory.length > 0) {
       const previousState = coordinateHistory[coordinateHistory.length - 1];
@@ -371,7 +392,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
     }
   };
 
-  // Mouse event handlers for panning and zooming
+  // Intention: Mouse interactions to pan (Ctrl+Left or Middle mouse) and buttons to zoom
   const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (event.button === 1 || (event.button === 0 && event.ctrlKey)) { // Middle mouse or Ctrl+Left
       setIsDragging(true);
@@ -398,6 +419,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
 
   // Mouse wheel zoom disabled - only use + and - buttons
 
+  // Intention: Return zoom/pan to defaults
   const resetView = () => {
     setZoom(1.0);
     setPanOffset({ x: 0, y: 0 });

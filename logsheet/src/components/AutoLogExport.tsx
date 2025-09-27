@@ -1,16 +1,30 @@
+/*
+  Intention: This page plans a trip using Google Maps, gathers inputs, estimates or requests HOS log entries
+  from a Django backend, caches intermediate state, and then navigates to the PDF overlay page to export.
+
+  High-level responsibilities:
+  - Initialize Google Maps (map, directions, autocomplete, layers) and wire UI inputs to form state.
+  - Compute/display an overview (distance, duration, stops, arrival) and request detailed logs from backend.
+  - Persist form and route snippets in a cache and localStorage, so users can resume workflow.
+  - Redirect to `/overlay` with computed progress so `PdfOverlayPage` can render and export.
+
+  Linting note: Keep console logs for debugging/tracing; allow `any` where Google Maps or 3rd-party types apply.
+*/
+/* eslint-disable no-console, @typescript-eslint/no-explicit-any */
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loadGoogleMaps } from '../utils/googleMaps';
 import type { LogEntry } from '../types/logsheet';
 import CacheManager from '../utils/CacheManager';
 
-// Declare google namespace for TypeScript
+// Intention: Declare the `google` namespace so TS accepts Maps usage from the global loader
 declare global {
   interface Window {
     google: any;
   }
 }
 
+// Intention: Form model that drives routing requests and backend parameters
 type PlannerForm = {
 	currentLocation: string;
 	pickupLocation: string;
@@ -26,6 +40,7 @@ type PlannerForm = {
  	serviceTimeMinutes: number; // pickup/drop-off service time in minutes
 };
 
+// Intention: Provide sensible defaults to speed up first interaction
 const defaultPlanner: PlannerForm = {
 	currentLocation: '',
 	pickupLocation: '',
@@ -40,6 +55,7 @@ const defaultPlanner: PlannerForm = {
  	serviceTimeMinutes: 60,
 };
 
+// Intention: Fallback segmentation when backend is unavailable; ensures overlay never appears empty
 function estimateDailySegments(totalSeconds: number): Array<{ startUtc: string; endUtc: string; status: LogEntry['status'] }>[] {
 	// Very naive HOS stub: split into 8h drive + 2h on + 14h off per day
 	// Returns an array for each day
@@ -85,6 +101,8 @@ function estimateDailySegments(totalSeconds: number): Array<{ startUtc: string; 
 	return results;
 }
 
+
+
 export const AutoLogExport: React.FC = () => {
 	const [gmaps, setGmaps] = useState<any | null>(null);
 	const [form, setForm] = useState<PlannerForm>(defaultPlanner);
@@ -113,6 +131,23 @@ export const AutoLogExport: React.FC = () => {
 	const trafficLayerRef = useRef<any | null>(null);
 	const transitLayerRef = useRef<any | null>(null);
 	const geocoderRef = useRef<any | null>(null);
+
+	useEffect(() => {
+		// Ensure we start at the very top
+		window.scrollTo(0, 0);
+		document.documentElement.scrollTop = 0; // html
+		document.body.scrollTop = 0;            // body (for Safari/older browsers)
+	  
+		const prevBody = document.body.style.overflow;
+		const prevHtml = document.documentElement.style.overflow;
+		document.body.style.overflow = 'hidden';
+		document.documentElement.style.overflow = 'hidden';
+	  
+		return () => {
+		  document.body.style.overflow = prevBody;
+		  document.documentElement.style.overflow = prevHtml;
+		};
+	  }, []);
 
 	// Load saved form from cache on mount
 	useEffect(() => {
@@ -147,6 +182,7 @@ export const AutoLogExport: React.FC = () => {
 		}
 	}, [form]); // Only depend on form changes
 
+  // Intention: Disable global scroll and ensure viewport starts at top while this page is active
   useEffect(() => {
 		loadGoogleMaps(['places']).then((maps) => {
 			setGmaps(maps);
@@ -517,6 +553,7 @@ export const AutoLogExport: React.FC = () => {
 		setIsCalculating(false);
   };
 
+  // Intention: Three-column grid (inputs | spacer | map) with scroll constrained to input column only
   return (
 		<div className="h-screen min-h-0 bg-gray-200 overflow-hidden flex flex-col relative">
 			{/* Main Content Area */}
@@ -526,7 +563,7 @@ export const AutoLogExport: React.FC = () => {
 			}}>
 
 			{/* Input Section - Full Space Container */}
-			<div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 overflow-y-auto h-full" style={{ gridArea: 'input' }}>
+			<div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 overflow-y-auto h-full" style={{ gridArea: 'input', height: '583px' }}>
 				{/* Header */}
 				<div className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 px-6 py-4 relative overflow-hidden mb-6">
 					{/* Decorative background pattern */}
@@ -784,7 +821,7 @@ export const AutoLogExport: React.FC = () => {
           </div>
 
 				{/* Map Section */}
-				<div className="bg-indigo-900 rounded-lg relative" style={{ gridArea: 'map' }}>
+				<div className="bg-indigo-900 rounded-lg relative" style={{ gridArea: 'map', height: '583px' }}>
 					<div ref={mapRef} className="w-full h-full rounded-lg" />
           </div>
           </div>

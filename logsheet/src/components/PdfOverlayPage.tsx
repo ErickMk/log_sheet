@@ -1,8 +1,22 @@
+/*
+  Intention: This component renders a PDF log sheet template and overlays computed trip data (text and grid)
+  directly onto an HTML canvas, then exports a final PDF composed from the template plus overlays.
+
+  High-level responsibilities:
+  - Load the log sheet template using PDF.js into an offscreen canvas as a background.
+  - Draw overlay content (date, locations, carrier/vehicle info, duty grid) using 2D canvas APIs.
+  - Optionally render multiple day pages and export them as a single multi-page PDF via pdf-lib.
+  - Accept trip data from upstream (AutoLogExport) and normalize it for drawing.
+
+  Notes on linting and debugging:
+  - We keep console logging for traceability during mapping and export, so we disable the no-console rule here.
+*/
+/* eslint-disable no-console, @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocument } from 'pdf-lib';
 
-// Set up PDF.js worker
+// Intention: Tell PDF.js where to find its worker script to enable background parsing
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 // Import coordinates from the TypeScript file
@@ -53,6 +67,12 @@ interface PdfOverlayPageProps {
 }
 
 export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
+  /*
+    Intention: Manage local UI/data state for a single rendered page and multi-day rendering pipeline.
+    - logData: the form-like fields to draw onto the canvas
+    - pdfLoaded/pdfError: template load state for guarded drawing
+    - dailyCanvasRefs/bgCanvas: per-day and background canvases to avoid re-render jitter
+  */
   const [logData, setLogData] = useState<LogDaySheetFields>({
     dateMonth: '12',
     dateDay: '15',
@@ -82,7 +102,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
   const dailyCanvasRefs = useRef<{ [key: number]: HTMLCanvasElement | null }>({});
   const dailyBgCanvasRefs = useRef<{ [key: number]: HTMLCanvasElement | null }>({});
 
-  // Function to render PDF for a specific day - copy the working method exactly
+  // Intention: Render the PDF template and overlays for a specific day onto that day's canvas
   const renderPdfForDay = async (dayIndex: number, dayData: any) => {
     console.log(`renderPdfForDay called for day ${dayIndex + 1}`, { dayData });
     const canvas = dailyCanvasRefs.current[dayIndex];
@@ -138,7 +158,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     }
   };
 
-  // Function to draw overlays for a specific day
+  // Intention: Draw all overlay primitives (text + duty grid) for a single day's data onto the provided context
   const drawOverlaysForDay = (ctx: CanvasRenderingContext2D, dayData: any) => {
     // Set up canvas for drawing
     ctx.textBaseline = 'top';
@@ -211,10 +231,10 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
   const [exportXNudge, setExportXNudge] = useState<number>(-15);
   const [exportYNudge, setExportYNudge] = useState<number>(16);
   
-  // Export state
+  // Intention: Track exporting progress to avoid duplicate clicks and give user feedback
   const [isExporting, setIsExporting] = useState<boolean>(false);
 
-  // Export all daily PDFs as a single multi-page PDF
+  // Intention: Build a brand new PDF and insert one page per day by rasterizing the template and overlays
   const exportAllDailyPdfs = async () => {
     if (!pdfRef.current || dailySheets.length === 0) {
       console.log('No PDF or daily sheets to export');
@@ -299,7 +319,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     }
   };
 
-  // Helper function to format time consistently
+  // Intention: Convert UTC ISO date to a human-readable 12-hour time string (AM/PM) used on overlays
   const toDisplayTime = (iso: string) => {
     console.log('Converting time:', iso);
     const dt = new Date(iso);
@@ -318,7 +338,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     return result;
   };
 
-  // Load PDF template
+  // Intention: Load the PDF template once, rasterize to an offscreen background canvas, and reuse it for drawing
   useEffect(() => {
     const loadPdf = async () => {
       try {
@@ -381,7 +401,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     loadPdf();
   }, []);
 
-  // Process tripData prop directly (no localStorage)
+  // Intention: Translate server-provided tripData into local overlay fields; keep UI robust if tripData is absent
   useEffect(() => {
     if (!tripData) {
       console.log('PDF Overlay - No trip data provided, using default values');
@@ -476,14 +496,14 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     }
   }, [tripData]);
 
-  // No localStorage persistence - data comes directly from server
+  // Intention: This component does not persist state; upstream provides the data for export
 
   // Debug: Log when logData changes
   useEffect(() => {
     console.log('logData state updated:', logData);
   }, [logData]);
 
-  // Draw overlays on PDF (do not re-render PDF each time)
+  // Intention: When template is ready or data changes, redraw overlays once using background canvas to prevent flicker
   useEffect(() => {
     if (!pdfLoaded) return;
 
@@ -512,7 +532,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     };
   }, [pdfLoaded, logData]);
 
-  // Redraw on resize
+  // Intention: Keep canvas contents crisp when the window is resized by redrawing background + overlays
   useEffect(() => {
     const onResize = () => {
       if (!pdfLoaded) return;
@@ -534,7 +554,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     return () => window.removeEventListener('resize', onResize);
   }, [pdfLoaded]);
 
-  // Calculate total hours for each duty status
+  // Intention: Aggregate OFF/SB/D/ON totals for the day from log entries for printing on the sheet
   const calculateDutyTotals = () => {
     const totals = {
       OFF: 0,
@@ -556,6 +576,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     return totals;
   };
 
+  // Intention: Draws the single-page overlay (text fields + duty grid) using the current logData into ctx
   const drawOverlayContent = (ctx: CanvasRenderingContext2D) => {
     ctx.save();
 
@@ -608,6 +629,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     ctx.restore();
   };
 
+  // Intention: Render a single continuous polyline across the grid, switching rows on duty status transitions
   const drawLogGrid = (ctx: CanvasRenderingContext2D) => {
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 1;
@@ -687,6 +709,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     ctx.stroke();
   };
 
+  // Intention: Single-page export of the currently visible canvas (template + overlay) via pdf-lib
   const exportPdf = async () => {
     try {
       // Load the PDF template with cache buster
@@ -1254,7 +1277,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
               >
                 Export PDF
               </button>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 hidden">
                 <label className="text-sm text-gray-700">X offset (px):</label>
                 <input
                   type="number"
@@ -1263,7 +1286,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
                   className="w-24 px-2 py-1 border border-gray-300 rounded"
                 />
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 hidden">
                 <label className="text-sm text-gray-700">Y offset (px):</label>
                 <input
                   type="number"
@@ -1274,7 +1297,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
               </div>
               <button
                 onClick={() => window.history.back()}
-                className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold"
+                className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold hidden"
               >
                 Back to Coordinate Mapper
               </button>

@@ -1,5 +1,4 @@
-import { Routes, Route, Link } from 'react-router-dom'
-import { LogSheetDemo } from './components/LogSheetDemo'
+import { Routes, Route, Link, Navigate } from 'react-router-dom'
 import { AutoLogExport } from './components/AutoLogExport'
 import { PdfOverlayPage } from './components/PdfOverlayPage'
 import { useState, useEffect } from 'react'
@@ -81,28 +80,28 @@ function App() {
         
         {/* Navigation Links */}
         <div className="flex items-center space-x-1">
-          <Link 
+          {/* <Link 
             className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors" 
             to="/"
+          >
+            Home
+          </Link> */}
+          <Link 
+            className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors" 
+            to="/auto"
           >
             Home
           </Link>
           <Link 
             className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors" 
-            to="/auto"
-          >
-            Auto Log Export
-          </Link>
-          <Link 
-            className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors" 
             to="/overlay"
           >
-            PDF Overlay
+            PDF Logsheet
           </Link>
       </div>
       </nav>
       <Routes>
-        <Route path="/" element={<LogSheetDemo />} />
+        <Route path="/" element={<Navigate to="/auto" replace />} />
         <Route path="/auto" element={<AutoLogExport />} />
         <Route path="/overlay" element={<PdfOverlayWrapper />} />
       </Routes>
