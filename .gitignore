@@ -1,0 +1,49 @@
+# Sample design directory
+/sample_design/
+
+# Coordinates files
+/coordinates.json
+/coordinates.ts
+
+# Environment files
+.env
+.env.local
+.env.*
+
+# Python virtual environment
+/venv/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django stuff
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Node modules
+/logsheet/node_modules/
+node_modules/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
