@@ -16,12 +16,20 @@
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "backend/wsgi.py" },
-    { 
-        "src": "/assets/(.*)", 
-        "dest": "/logsheet/dist/assets/$1" 
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/wsgi.py"
     },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/logsheet/dist/index.html" }
+    {
+      "src": "/assets/(.*)",
+      "dest": "/logsheet/assets/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/logsheet/index.html"
+    }
   ]
 }
