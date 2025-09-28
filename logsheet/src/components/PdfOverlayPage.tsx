@@ -339,16 +339,21 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
   };
 
   // Intention: Load the PDF template once, rasterize to an offscreen background canvas, and reuse it for drawing
+  // Update the loadPdf function in your useEffect around line 428
   useEffect(() => {
     const loadPdf = async () => {
       try {
-        console.log('Loading PDF template from /log_sheet.pdf...');
+        console.log('Loading PDF template from GitHub...');
+        
+        // Use the correct GitHub Raw URL
+        const PDF_URL = 'https://raw.githubusercontent.com/ErickMk/pdf-assets/main/log_sheet.pdf';
+        
         const loadingTask = pdfjsLib.getDocument({
-          url: `/log_sheet.pdf?v=${Date.now()}`,
+          url: `${PDF_URL}?v=${Date.now()}`, // Cache buster
           verbosity: 0,
-          disableAutoFetch: true,
-          disableStream: true,
-          disableRange: true
+          disableAutoFetch: false, // Enable auto-fetch for external URLs
+          disableStream: false,    // Enable streaming for better performance
+          disableRange: false      // Enable range requests for external URLs
         });
 
         const pdf = await loadingTask.promise;
@@ -712,8 +717,9 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
   // Intention: Single-page export of the currently visible canvas (template + overlay) via pdf-lib
   const exportPdf = async () => {
     try {
-      // Load the PDF template with cache buster
-      const templateResponse = await fetch(`/log_sheet.pdf?v=${Date.now()}`);
+      // Use the same GitHub Raw URL for export
+      const PDF_URL = 'https://raw.githubusercontent.com/ErickMk/pdf-assets/main/log_sheet.pdf';
+      const templateResponse = await fetch(`${PDF_URL}?v=${Date.now()}`);
       if (!templateResponse.ok) {
         throw new Error('Failed to load PDF template');
       }
