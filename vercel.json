@@ -7,7 +7,7 @@
       "use": "@vercel/static-build",
       "config": { "distDir": "dist" }
     },
-    // ... (Your python builds remain the same)
+    // ... (Python builds)
     {
       "src": "vercel_app.py",
       "use": "@vercel/python"
@@ -18,10 +18,23 @@
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "backend/wsgi.py" }, // API routes to Python backend
-    { "handle": "filesystem" },                        // Check for static files (including JS/CSS)
-    // 💡 THE FIX IS HERE: Change the fallback destination to the root index.html
-    // Vercel's static-build often promotes the files to the deployment root.
-    { "src": "/(.*)", "dest": "/index.html" }
+    // 1. PYTHON API ROUTES
+    { "src": "/api/(.*)", "dest": "backend/wsgi.py" },
+    
+    // 2. STATIC ASSET REWRITE: Directs requests for assets to their nested location
+    // We assume your static assets like main.js are requested via /assets/
+    // and are located in the build output at logsheet/dist/assets/
+    { 
+        "src": "/assets/(.*)", 
+        "dest": "/logsheet/dist/assets/$1" 
+    },
+    
+    // 3. FILESYSTEM CHECK
+    // This now only checks for other static files (like favicon.ico, etc.)
+    { "handle": "filesystem" },
+    
+    // 4. SPA FALLBACK
+    // Serve the index.html from its expected build location
+    { "src": "/(.*)", "dest": "/logsheet/dist/index.html" }
   ]
 }
