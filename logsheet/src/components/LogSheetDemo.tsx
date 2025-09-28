@@ -54,7 +54,7 @@ export const LogSheetDemo: React.FC = () => {
   };
 
 
-  const handleTemplateBasedExport = async () => {
+  const _handleTemplateBasedExport = async () => {
     try {
       // Show loading state
       const button = document.querySelector('[data-template-export-button]') as HTMLButtonElement;
