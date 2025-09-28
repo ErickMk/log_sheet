@@ -21,6 +21,10 @@
       "dest": "backend/wsgi.py"
     },
     {
+      "src": "/pdf.worker.min.js",
+      "dest": "/logsheet/pdf.worker.min.js"
+    },
+    {
       "src": "/assets/(.*)",
       "dest": "/logsheet/assets/$1"
     },
