@@ -1,4 +1,4 @@
-/*
+﻿/*
   Intention: This page plans a trip using Google Maps, gathers inputs, estimates or requests HOS log entries
   from a Django backend, caches intermediate state, and then navigates to the PDF overlay page to export.
 
@@ -555,15 +555,15 @@ export const AutoLogExport: React.FC = () => {
 
   // Intention: Three-column grid (inputs | spacer | map) with scroll constrained to input column only
   return (
-		<div className="h-screen min-h-0 bg-gray-200 overflow-hidden flex flex-col relative">
+	<div
+		className="fixed inset-x-0 bg-gray-200 overflow-hidden flex flex-col"
+		style={{ top: 'var(--nav-height, 64px)', bottom: 0 }}
+	>
 			{/* Main Content Area */}
-			<div className="flex-1 min-h-0 grid h-full" style={{
-				gridTemplateColumns: '34% 1% 65%',
-				gridTemplateAreas: '"input space map"'
-			}}>
+			<div className="flex-1 min-h-0 grid h-full grid-cols-1 lg:grid-cols-12 gap-4">
 
-			{/* Input Section - Full Space Container */}
-			<div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 overflow-y-auto h-full" style={{ gridArea: 'input', height: '583px' }}>
+			{/* Input Section - scrolls independently */}
+			<div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 overflow-y-auto h-full min-h-0 lg:col-span-4">
 				{/* Header */}
 				<div className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 px-6 py-4 relative overflow-hidden mb-6">
 					{/* Decorative background pattern */}
@@ -588,14 +588,14 @@ export const AutoLogExport: React.FC = () => {
 						<div className="flex space-x-2">
 							<button
 								onClick={() => cacheManager.logCacheStatus()}
-								className="px-3 py-1 bg-white/20 text-white text-xs rounded hover:bg-white/30 transition-colors"
+								className="px-3 py-1 bg-white/20 text-white text-xs rounded hover:bg-white/30 transition-colors hidden"
 								title="Log Cache Status"
 							>
 								Debug
 							</button>
 							<button
 								onClick={() => cacheManager.clearCacheForTesting()}
-								className="px-3 py-1 bg-red-500/20 text-white text-xs rounded hover:bg-red-500/30 transition-colors"
+								className="px-3 py-1 bg-red-500/20 text-white text-xs rounded hover:bg-red-500/30 transition-colors hidden"
 								title="Clear Cache"
 							>
 								Clear
@@ -617,21 +617,26 @@ export const AutoLogExport: React.FC = () => {
 									className="flex-1 px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white shadow-md hover:shadow-lg transition-all duration-200 text-sm text-gray-700 placeholder-gray-400" 
 									placeholder="Enter starting location" 
 								/>
-								<button 
-									onClick={setCurrentFromGeolocation} 
-									type="button" 
-									className="px-3 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 border-2 border-blue-500 shadow-md hover:shadow-lg transform hover:-translate-y-0.5" 
+								<button
+									onClick={setCurrentFromGeolocation}
+									type="button"
+									className="px-3 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 border-2 border-blue-500 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
 									title="Use My Location"
-								>
-									📍
+									>
+									<svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+										<path d="M10 2a6 6 0 00-6 6c0 4.418 6 10 6 10s6-5.582 6-10a6 6 0 00-6-6zm0 8a2 2 0 110-4 2 2 0 010 4z"/>
+									</svg>
 								</button>
-								<button 
-									onClick={setCurrentFromSelection} 
-									type="button" 
-									className="px-3 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all duration-200 border-2 border-green-500 shadow-md hover:shadow-lg transform hover:-translate-y-0.5" 
+
+								<button
+									onClick={setCurrentFromSelection}
+									type="button"
+									className="px-3 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all duration-200 border-2 border-green-500 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
 									title="Use Selected Point"
-								>
-									✓
+									>
+									<svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+										<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15l-4.121-4.121a1 1 0 111.414-1.414L8.414 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+									</svg>
 								</button>
 							</div>
 						</div>
@@ -647,13 +652,15 @@ export const AutoLogExport: React.FC = () => {
 									className="flex-1 px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white shadow-md hover:shadow-lg transition-all duration-200 text-sm text-gray-700 placeholder-gray-400" 
 									placeholder="Enter pickup location" 
 								/>
-								<button 
-									onClick={setPickupFromSelection} 
-									type="button" 
-									className="px-3 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all duration-200 border-2 border-green-500 shadow-md hover:shadow-lg transform hover:-translate-y-0.5" 
+								<button
+									onClick={setPickupFromSelection}
+									type="button"
+									className="px-3 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all duration-200 border-2 border-green-500 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
 									title="Use Selected Point"
-								>
-									✓
+									>
+									<svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+										<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15l-4.121-4.121a1 1 0 111.414-1.414L8.414 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+									</svg>
 								</button>
 							</div>
 						</div>
@@ -669,13 +676,15 @@ export const AutoLogExport: React.FC = () => {
 									className="flex-1 px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white shadow-md hover:shadow-lg transition-all duration-200 text-sm text-gray-700 placeholder-gray-400" 
 									placeholder="Enter final destination" 
 								/>
-								<button 
-									onClick={setDestinationFromSelection} 
-									type="button" 
-									className="px-3 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all duration-200 border-2 border-green-500 shadow-md hover:shadow-lg transform hover:-translate-y-0.5" 
+								<button
+									onClick={setDestinationFromSelection}
+									type="button"
+									className="px-3 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all duration-200 border-2 border-green-500 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
 									title="Use Selected Point"
-								>
-									✓
+									>
+									<svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+										<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15l-4.121-4.121a1 1 0 111.414-1.414L8.414 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+									</svg>
 								</button>
 							</div>
 						</div>
@@ -744,7 +753,11 @@ export const AutoLogExport: React.FC = () => {
 					<details className="group">
 						<summary className="cursor-pointer select-none flex items-center justify-between px-2 py-2 rounded-md bg-white border border-gray-200 hover:bg-gray-50 text-sm font-semibold text-gray-800">
 							<span>Assumptions</span>
-							<span className="text-gray-500 group-open:rotate-180 transition-transform">▾</span>
+							<span className="text-gray-500 transition-transform duration-200 group-open:rotate-180" aria-hidden="true">
+								<svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+									<path fillRule="evenodd" clipRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z" />
+								</svg>
+							</span>
 						</summary>
 						<div className="mt-3 grid grid-cols-2 gap-3">
 							<label className="flex items-center gap-2 text-sm text-gray-700">
@@ -821,7 +834,7 @@ export const AutoLogExport: React.FC = () => {
           </div>
 
 				{/* Map Section */}
-				<div className="bg-indigo-900 rounded-lg relative" style={{ gridArea: 'map', height: '583px' }}>
+				<div className="bg-indigo-900 rounded-lg relative h-[40vh] md:h-[50vh] lg:h-full min-h-[300px] lg:col-span-8">
 					<div ref={mapRef} className="w-full h-full rounded-lg" />
           </div>
           </div>
@@ -914,5 +927,9 @@ export const AutoLogExport: React.FC = () => {
     </div>
   );
 };
+
+
+
+
 
 

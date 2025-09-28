@@ -293,7 +293,7 @@ class TripViewSet(viewsets.ModelViewSet):
             distance_meters = int(miles / 0.000621371)
 
         # Calculate all distances using Google Maps API
-        os.environ['GOOGLE_MAPS_API_KEY'] = 'AIzaSyDRRZRTNOESeS7Sh9aVeBu3Z35nAkRjas0'
+        # Expect GOOGLE_MAPS_API_KEY to be set in environment (see README.md)
         
         # Get exact distances for all segments
         start_to_pickup_miles = 0
@@ -743,4 +743,4 @@ class LogEntryViewSet(viewsets.ModelViewSet):
     queryset = LogEntry.objects.all()
     serializer_class = LogEntrySerializer
 
-# Create your views here.
+

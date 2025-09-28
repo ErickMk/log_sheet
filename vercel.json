@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "logsheet/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    },
+    {
+      "src": "vercel_app.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "backend/wsgi.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "backend/wsgi.py" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/logsheet/index.html" }
+  ]
+}

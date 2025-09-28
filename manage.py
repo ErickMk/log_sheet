@@ -3,6 +3,14 @@
 import os
 import sys
 
+# Load environment variables from a .env file at project root (if present)
+try:
+    from dotenv import load_dotenv  # type: ignore
+    load_dotenv()
+except Exception:
+    # dotenv is optional locally; if missing, environment variables must be set another way
+    pass
+
 
 def main():
     """Run administrative tasks."""
