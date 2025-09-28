@@ -6,8 +6,9 @@ import { useState, useEffect } from 'react'
 // Wrapper component to handle data fetching for PdfOverlayPage
 const PdfOverlayWrapper = () => {
     const [tripData, setTripData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // Using setLoading and setError in the useEffect below
+    const [, setLoading] = useState(true);
+    const [, setError] = useState<string | null>(null);
   const [hasProcessed, setHasProcessed] = useState(false);
 
   useEffect(() => {

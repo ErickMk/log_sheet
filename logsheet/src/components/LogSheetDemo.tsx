@@ -54,14 +54,7 @@ export const LogSheetDemo: React.FC = () => {
   };
 
 
-  const handleTemplateBasedExport = async () => {
-    try {
-      // Show loading state
-      const button = document.querySelector('[data-template-export-button]') as HTMLButtonElement;
-      if (button) {
-        button.disabled = true;
-        button.textContent = 'Exporting Template PDF...';
-      }
+  // Removed unused function: handleTemplateBasedExport
 
       // Export using template overlay
       await exportTemplateBasedPDF(logData);

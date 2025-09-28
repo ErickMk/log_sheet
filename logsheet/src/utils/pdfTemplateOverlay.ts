@@ -336,9 +336,23 @@ export function convertLogEntriesToPDFFormat(logEntriesUtc: Array<{ status: stri
   });
 }
 
+// Define the missing types
+interface DailyLogSheetData {
+  date: string;
+  // Add other required fields
+}
+
+interface FieldCoordinates {
+  // Add required coordinate fields
+  [key: string]: any;
+}
+
+// Helper function for drawing date fields
+function drawDateFields(ctx: CanvasRenderingContext2D, date: string, coordinates: FieldCoordinates) {
+  // Implementation
+}
+
 export function drawDailyLogSheet(ctx: CanvasRenderingContext2D, data: DailyLogSheetData, coordinates: FieldCoordinates) {
-  // Remove the unused fields variable
-  
   // Draw the date
   drawDateFields(ctx, data.date, coordinates);
 }

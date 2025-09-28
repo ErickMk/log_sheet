@@ -1,4 +1,4 @@
-﻿/*
+/*
   Intention: This page plans a trip using Google Maps, gathers inputs, estimates or requests HOS log entries
   from a Django backend, caches intermediate state, and then navigates to the PDF overlay page to export.
 
@@ -20,7 +20,7 @@ import CacheManager from '../utils/CacheManager';
 // Intention: Declare the `google` namespace so TS accepts Maps usage from the global loader
 declare global {
   interface Window {
-    google: any;
+    google: { maps: any };
   }
 }
 
