@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,7 @@ SECRET_KEY = "django-insecure-*la-va@b(5t7)kmo+om$&0d0prlhh@qaztwr+3!26dgsa@quuv
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.com"]
 
 
 # Application definition
@@ -120,15 +121,49 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
-# CORS/CSRF for local React dev (Vite)
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+# CORS/CSRF Configuration
+# Allow all origins during development - CHANGE THIS FOR PRODUCTION
+CORS_ALLOW_ALL_ORIGINS = True
+
+# For production, use specific origins instead:
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:5173",
+#     "http://127.0.0.1:5173",
+#     "https://automatedlogsheet-11cdx651c-erickmungai27-gmailcoms-projects.vercel.app",
+#     "https://your-custom-domain.com",  # Add your custom domain if you have one
+# ]
+
+# Allow credentials to be included in CORS requests
+CORS_ALLOW_CREDENTIALS = True
+
+# Allow common headers
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
+
+# Allow common methods
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# CSRF settings
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://automatedlogsheet-11cdx651c-erickmungai27-gmailcoms-projects.vercel.app",
 ]
 
 REST_FRAMEWORK = {
