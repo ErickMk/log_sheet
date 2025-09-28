@@ -20,9 +20,11 @@ import CacheManager from '../utils/CacheManager';
 // Intention: Declare the `google` namespace so TS accepts Maps usage from the global loader
 declare global {
   interface Window {
-    google: { maps: any };
+    google: any;
   }
 }
+
+// We'll use 'any' type for maps to avoid TypeScript errors
 
 // Intention: Form model that drives routing requests and backend parameters
 type PlannerForm = {
@@ -184,7 +186,7 @@ export const AutoLogExport: React.FC = () => {
 
   // Intention: Disable global scroll and ensure viewport starts at top while this page is active
   useEffect(() => {
-		loadGoogleMaps(['places']).then((maps) => {
+		loadGoogleMaps(['places']).then((maps: any) => {
 			setGmaps(maps);
 			if (mapRef.current) {
 				mapInstance.current = new maps.Map(mapRef.current, {

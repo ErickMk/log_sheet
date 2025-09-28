@@ -809,12 +809,14 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
         };
       });
       
+             // Handle both property name formats for distance values
+             // TypeScript will use the type definition, but at runtime we'll get the actual property names from the server
              return {
                date: dayDate,
                startLocation: day.start_location,
                endLocation: day.end_location,
-               dailyDistance: (day as any).daily_distance || day.distance_covered,  // Distance driven this day
-               cumulativeDistance: (day as any).cumulative_distance || day.total_distance,  // Total distance from start
+               dailyDistance: (day as any).daily_distance || day.distance_covered,  // Try server format first, fallback to type definition
+               cumulativeDistance: (day as any).cumulative_distance || day.total_distance,  // Try server format first, fallback to type definition
                drivingHours: day.driving_hours,
                logEntries: dayLogEntries,
                dutyStatusEntries: dutyStatusEntries

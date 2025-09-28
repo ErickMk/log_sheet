@@ -306,7 +306,7 @@ async function overlayShipping(page: PDFPage, fields: LogDaySheetFields) {
 /**
  * Overlay recap information
  */
-async function overlayRecap(page: PDFPage, fields: LogDaySheetFields) {
+async function overlayRecap(page: PDFPage, _fields: LogDaySheetFields) {
   const coords = PDF_COORDINATES.recap;
   
   // Calculate totals (simplified)

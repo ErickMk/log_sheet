@@ -3,7 +3,7 @@ import { PdfCoordinateMapper } from './PdfCoordinateMapper';
 import { AutoLogExport } from './AutoLogExport';
 import { PdfOverlayPage } from './PdfOverlayPage';
 import type { LogDaySheetFields } from '../types/logsheet';
-import { exportTemplateBasedPDF, previewPdfTemplate } from '../utils/templatePdfExport';
+import { previewPdfTemplate } from '../utils/templatePdfExport';
 
 // Sample data for demonstration
 const sampleLogData: LogDaySheetFields = {
@@ -54,36 +54,7 @@ export const LogSheetDemo: React.FC = () => {
   };
 
 
-  const handleTemplateBasedExport = async () => {
-    try {
-      // Show loading state
-      const button = document.querySelector('[data-template-export-button]') as HTMLButtonElement;
-      if (button) {
-        button.disabled = true;
-        button.textContent = 'Exporting Template PDF...';
-      }
-
-      // Export using template overlay
-      await exportTemplateBasedPDF(logData);
-      
-      // Reset button state
-      if (button) {
-        button.disabled = false;
-        button.textContent = 'Export Template PDF';
-      }
-      
-    } catch (error) {
-      console.error('Template export failed:', error);
-      alert('Failed to export template PDF. Please ensure Logsheet.pdf is in the public folder.');
-      
-      // Reset button state
-      const button = document.querySelector('[data-template-export-button]') as HTMLButtonElement;
-      if (button) {
-        button.disabled = false;
-        button.textContent = 'Export Template PDF';
-      }
-    }
-  };
+  // Function removed to fix TypeScript errors
 
   const handlePreviewTemplate = async () => {
     try {
