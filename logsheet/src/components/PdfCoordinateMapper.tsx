@@ -197,8 +197,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
 
           const renderContext = {
             canvasContext: context,
-            viewport: viewport,
-            canvas: canvas
+            viewport: viewport
           };
 
           await page.render(renderContext).promise;
@@ -233,7 +232,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
   }, [coordinates, pdfLoaded, zoom, panOffset]);
 
   // Intention: Render red dot + label for every saved field coordinate, respecting zoom/pan
-  const drawCoordinateMarkers = (ctx: CanvasRenderingContext2D, _canvas: HTMLCanvasElement) => {
+  const drawCoordinateMarkers = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
     // Apply zoom and pan transformations
     ctx.save();
     ctx.translate(panOffset.x, panOffset.y);

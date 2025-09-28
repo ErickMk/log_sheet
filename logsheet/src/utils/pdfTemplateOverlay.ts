@@ -306,7 +306,7 @@ async function overlayShipping(page: PDFPage, fields: LogDaySheetFields) {
 /**
  * Overlay recap information
  */
-async function overlayRecap(page: PDFPage, _fields: LogDaySheetFields) {
+async function overlayRecap(page: PDFPage, fields: LogDaySheetFields) {
   const coords = PDF_COORDINATES.recap;
   
   // Calculate totals (simplified)
@@ -334,25 +334,4 @@ export function convertLogEntriesToPDFFormat(logEntriesUtc: Array<{ status: stri
       endTime: `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`
     };
   });
-}
-
-// Define the missing types
-interface DailyLogSheetData {
-  date: string;
-  // Add other required fields
-}
-
-interface FieldCoordinates {
-  // Add required coordinate fields
-  [key: string]: any;
-}
-
-// Helper function for drawing date fields
-function drawDateFields(_ctx: CanvasRenderingContext2D, _date: string, _coordinates: FieldCoordinates) {
-  // Implementation will be added when needed
-}
-
-export function drawDailyLogSheet(ctx: CanvasRenderingContext2D, data: DailyLogSheetData, coordinates: FieldCoordinates) {
-  // Draw the date
-  drawDateFields(ctx, data.date, coordinates);
 }
