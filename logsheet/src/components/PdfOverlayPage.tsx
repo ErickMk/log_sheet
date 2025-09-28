@@ -813,8 +813,8 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
                date: dayDate,
                startLocation: day.start_location,
                endLocation: day.end_location,
-               dailyDistance: day.distance_covered,  // Distance driven this day
-               cumulativeDistance: day.total_distance,  // Total distance from start
+               dailyDistance: day.daily_distance,  // Distance driven this day
+               cumulativeDistance: day.cumulative_distance,  // Total distance from start
                drivingHours: day.driving_hours,
                logEntries: dayLogEntries,
                dutyStatusEntries: dutyStatusEntries

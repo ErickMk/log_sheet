@@ -188,7 +188,7 @@ export const AutoLogExport: React.FC = () => {
 			setGmaps(maps);
 			if (mapRef.current) {
 				mapInstance.current = new maps.Map(mapRef.current, {
-					center: new maps.LatLng(39.8283, -98.5795), // USA center
+					center: { lat: 39.8283, lng: -98.5795 }, // USA center
 					zoom: 4,
 					mapTypeControl: true,
 					streetViewControl: false,
