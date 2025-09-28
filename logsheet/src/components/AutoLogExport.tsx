@@ -57,6 +57,68 @@ const defaultPlanner: PlannerForm = {
  	serviceTimeMinutes: 60,
 };
 
+// Safe localStorage operations with quota handling
+const safeLocalStorage = {
+	setItem: (key: string, value: string): boolean => {
+		try {
+			localStorage.setItem(key, value);
+			return true;
+		} catch (error) {
+			if (error instanceof DOMException && (
+				error.code === 22 || // QUOTA_EXCEEDED_ERR
+				error.name === 'QuotaExceededError'
+			)) {
+				console.warn(`LocalStorage quota exceeded for key: ${key}. Clearing old data and retrying.`);
+				try {
+					// Clear old autoLog data to free up space
+					const keys = Object.keys(localStorage);
+					keys.forEach(k => {
+						if (k.includes('autoLogExport') || k.includes('session_')) {
+							localStorage.removeItem(k);
+						}
+					});
+					// Retry after clearing
+					localStorage.setItem(key, value);
+					return true;
+				} catch (retryError) {
+					console.error(`Failed to save to localStorage even after clearing: ${key}`, retryError);
+					return false;
+				}
+			} else {
+				console.error(`LocalStorage error for key: ${key}`, error);
+				return false;
+			}
+		}
+	},
+	getItem: (key: string): string | null => {
+		try {
+			return localStorage.getItem(key);
+		} catch (error) {
+			console.error(`LocalStorage read error for key: ${key}`, error);
+			return null;
+		}
+	}
+};
+
+// Safe cache manager operations
+const safeCacheManager = {
+	setAutoLogExportCache: (cacheManager: CacheManager, data: any): void => {
+		try {
+			cacheManager.setAutoLogExportCache(data);
+		} catch (error) {
+			console.warn('Cache manager failed, continuing without cache:', error);
+		}
+	},
+	getAutoLogExportCache: (cacheManager: CacheManager): any => {
+		try {
+			return cacheManager.getAutoLogExportCache();
+		} catch (error) {
+			console.warn('Cache manager read failed, using defaults:', error);
+			return { form: {}, routeData: null };
+		}
+	}
+};
+
 // Intention: Fallback segmentation when backend is unavailable; ensures overlay never appears empty
 function estimateDailySegments(totalSeconds: number): Array<{ startUtc: string; endUtc: string; status: LogEntry['status'] }>[] {
 	// Very naive HOS stub: split into 8h drive + 2h on + 14h off per day
@@ -153,36 +215,34 @@ export const AutoLogExport: React.FC = () => {
 
 	// Load saved form from cache on mount
 	useEffect(() => {
-		try {
-			const cached = cacheManager.getAutoLogExportCache();
-			console.log('AutoLogExport: Loading from cache:', cached);
-			
-			if (cached.form && Object.keys(cached.form).length > 0) {
-				console.log('Restoring form from cache:', cached.form);
-				setForm(cached.form);
-			}
-			
-			if (cached.routeData) {
-				console.log('Restoring route data from cache:', cached.routeData);
-				setRouteData(cached.routeData);
-			}
-			
-			// Debug cache status
-			cacheManager.logCacheStatus();
-		} catch (error) {
-			console.error('Error loading from cache:', error);
+		const cached = safeCacheManager.getAutoLogExportCache(cacheManager);
+		console.log('AutoLogExport: Loading from cache:', cached);
+		
+		if (cached.form && Object.keys(cached.form).length > 0) {
+			console.log('Restoring form from cache:', cached.form);
+			setForm(cached.form);
+		}
+		
+		if (cached.routeData) {
+			console.log('Restoring route data from cache:', cached.routeData);
+			setRouteData(cached.routeData);
 		}
 	}, []); // Empty dependency array - only run on mount
 
-	// Persist form changes to cache
+	// Persist form changes to cache (simplified to reduce storage usage)
 	useEffect(() => {
-		try {
-			console.log('Saving form to cache:', form);
-			cacheManager.setAutoLogExportCache({ form });
-		} catch (error) {
-			console.error('Error saving form to cache:', error);
-		}
-	}, [form]); // Only depend on form changes
+		// Only cache essential form data
+		const essentialFormData = {
+			currentLocation: form.currentLocation,
+			pickupLocation: form.pickupLocation,
+			destination: form.destination,
+			cycle: form.cycle,
+			startDateISO: form.startDateISO,
+			startTimeLocal: form.startTimeLocal
+		};
+		
+		safeCacheManager.setAutoLogExportCache(cacheManager, { form: essentialFormData });
+	}, [form, cacheManager]); // Only depend on form changes
 
   // Intention: Disable global scroll and ensure viewport starts at top while this page is active
   useEffect(() => {
@@ -202,17 +262,6 @@ export const AutoLogExport: React.FC = () => {
 				transitLayerRef.current = new maps.TransitLayer();
 				geocoderRef.current = new maps.Geocoder();
 				// default POIs/businesses are visible on the base map
-				
-				// Restore cached map route if available
-				const cached = cacheManager.getAutoLogExportCache();
-				if (cached.mapRoute && cached.mapRoute.rendered && cached.mapRoute.directions) {
-					try {
-						directionsRenderer.current.setDirections(cached.mapRoute.directions);
-						console.log('Restored cached map route');
-					} catch (error) {
-						console.warn('Failed to restore cached map route:', error);
-					}
-				}
 			}
 			// Autocomplete with listeners to set formatted address
 			if (currentInputRef.current) {
@@ -272,7 +321,7 @@ export const AutoLogExport: React.FC = () => {
 		});
 	};
 
-	const setCurrentFromGeolocation = async () => {
+	const setCurrentFromGeolocation = async (): Promise<void> => {
 		if (!gmaps || !mapInstance.current) return;
 		if (!navigator.geolocation) {
 			alert('Geolocation is not supported by this browser.');
@@ -281,7 +330,7 @@ export const AutoLogExport: React.FC = () => {
 		navigator.geolocation.getCurrentPosition(async (pos) => {
 			const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
 			const addr = await reverseGeocode(coords);
-			setForm({ ...form, currentLocation: addr });
+			setForm(prevForm => ({ ...prevForm, currentLocation: addr }));
 			mapInstance.current!.panTo(coords);
 			mapInstance.current!.setZoom(14);
 			if (currentMarkerRef.current) currentMarkerRef.current.setMap(null);
@@ -292,7 +341,7 @@ export const AutoLogExport: React.FC = () => {
 		});
 	};
 
-	const setCurrentFromSelection = async () => {
+	const setCurrentFromSelection = async (): Promise<void> => {
 		if (!gmaps || !mapInstance.current) return;
 		const latLng = selectedLatLngRef.current;
 		if (!latLng) {
@@ -301,12 +350,12 @@ export const AutoLogExport: React.FC = () => {
 		}
 		const coords = { lat: latLng.lat(), lng: latLng.lng() };
 		const addr = await reverseGeocode(coords);
-		setForm({ ...form, currentLocation: addr });
+		setForm(prevForm => ({ ...prevForm, currentLocation: addr }));
 		if (currentMarkerRef.current) currentMarkerRef.current.setMap(null);
 		currentMarkerRef.current = new gmaps.Marker({ position: coords, map: mapInstance.current!, title: 'Current location' });
 	};
 
-	const setPickupFromSelection = async () => {
+	const setPickupFromSelection = async (): Promise<void> => {
 		if (!gmaps || !mapInstance.current) return;
 		const latLng = selectedLatLngRef.current;
 		if (!latLng) {
@@ -315,12 +364,12 @@ export const AutoLogExport: React.FC = () => {
     }
 		const coords = { lat: latLng.lat(), lng: latLng.lng() };
 		const addr = await reverseGeocode(coords);
-		setForm({ ...form, pickupLocation: addr });
+		setForm(prevForm => ({ ...prevForm, pickupLocation: addr }));
 		if (pickupMarkerRef.current) pickupMarkerRef.current.setMap(null);
 		pickupMarkerRef.current = new gmaps.Marker({ position: coords, map: mapInstance.current!, title: 'Pickup Location' });
 	};
 
-	const setDestinationFromSelection = async () => {
+	const setDestinationFromSelection = async (): Promise<void> => {
 		if (!gmaps || !mapInstance.current) return;
 		const latLng = selectedLatLngRef.current;
 		if (!latLng) {
@@ -329,14 +378,14 @@ export const AutoLogExport: React.FC = () => {
 		}
 		const coords = { lat: latLng.lat(), lng: latLng.lng() };
 		const addr = await reverseGeocode(coords);
-		setForm({ ...form, destination: addr });
+		setForm(prevForm => ({ ...prevForm, destination: addr }));
 		if (destinationMarkerRef.current) destinationMarkerRef.current.setMap(null);
 		destinationMarkerRef.current = new gmaps.Marker({ position: coords, map: mapInstance.current!, title: 'Destination' });
 	};
 
 	const navigate = useNavigate();
 
-	const handleRoute = async () => {
+	const handleRoute = async (): Promise<void> => {
 		if (!gmaps || !directionsService.current || !directionsRenderer.current) return;
 		if (!form.currentLocation || !form.destination) {
 			alert('Enter both current location and destination');
@@ -419,13 +468,9 @@ export const AutoLogExport: React.FC = () => {
 		const newRouteData = { distance: distanceMiles, duration: durationHours, stops, arrival: arrivalStr };
 		setRouteData(newRouteData);
 		
-		// Cache the route data and map route
-		cacheManager.setAutoLogExportCache({ 
-			routeData: newRouteData,
-			mapRoute: {
-				directions: res,
-				rendered: true
-			}
+		// Cache only essential route data
+		safeCacheManager.setAutoLogExportCache(cacheManager, { 
+			routeData: newRouteData
 		});
 
 		// Call backend to create trip and generate HOS segments
@@ -473,7 +518,7 @@ export const AutoLogExport: React.FC = () => {
 			setRouteData(updatedRouteData);
 			
 			// Update cache with server response
-			cacheManager.setAutoLogExportCache({ routeData: updatedRouteData });
+			safeCacheManager.setAutoLogExportCache(cacheManager, { routeData: updatedRouteData });
 
 			// Prepare overlay days from server log_entries; if none, fall back locally
 			let daysToUse: Array<Array<{ startUtc: string; endUtc: string; status: LogEntry['status'] }>> = [];
@@ -511,15 +556,24 @@ export const AutoLogExport: React.FC = () => {
 				serviceTimeMinutes: form.serviceTimeMinutes,
 				tripId: data.id
 			};
+			
+			// Use safe localStorage operations
 			console.log('Saving to localStorage:', { daysToUse, metaData, dailyProgress });
-			localStorage.setItem('autoLogExport.days', JSON.stringify(daysToUse));
-			localStorage.setItem('autoLogExport.meta', JSON.stringify(metaData));
+			const daysSuccess = safeLocalStorage.setItem('autoLogExport.days', JSON.stringify(daysToUse));
+			const metaSuccess = safeLocalStorage.setItem('autoLogExport.meta', JSON.stringify(metaData));
+			const readySuccess = safeLocalStorage.setItem('autoLogExport.ready', 'true');
+			const noticeMessage = serverEntries.length > 0 ? 'Auto log filled. You can now export the PDF.' : 'Auto log filled (fallback). You can now export the PDF.';
+			const noticeSuccess = safeLocalStorage.setItem('autoLogExport.notice', noticeMessage);
+			
 			if (dailyProgress) {
-				localStorage.setItem('autoLogExport.dailyProgress', JSON.stringify(dailyProgress));
+				safeLocalStorage.setItem('autoLogExport.dailyProgress', JSON.stringify(dailyProgress));
 			}
-			localStorage.setItem('autoLogExport.ready', 'true');
-			localStorage.setItem('autoLogExport.notice', serverEntries.length > 0 ? 'Auto log filled. You can now export the PDF.' : 'Auto log filled (fallback). You can now export the PDF.');
-			alert('Auto log filling complete. Redirecting to PDF Overlay to export.');
+			
+			if (daysSuccess && metaSuccess && readySuccess && noticeSuccess) {
+				alert('Auto log filling complete. Redirecting to PDF Overlay to export.');
+			} else {
+				alert('Auto log filling complete but some data may not be saved. Redirecting to PDF Overlay to export.');
+			}
 			navigate('/overlay');
 		} catch (err) {
 			console.error('Backend error:', err);
@@ -529,7 +583,7 @@ export const AutoLogExport: React.FC = () => {
 			setRouteData(fallbackRouteData);
 			
 			// Cache fallback route data
-			cacheManager.setAutoLogExportCache({ routeData: fallbackRouteData });
+			safeCacheManager.setAutoLogExportCache(cacheManager, { routeData: fallbackRouteData });
 			const days = estimateDailySegments(durationSec);
 			const fallbackMeta = {
 				origin: firstLeg?.start_address || form.currentLocation,
@@ -545,10 +599,10 @@ export const AutoLogExport: React.FC = () => {
 				serviceTimeMinutes: form.serviceTimeMinutes
 			};
 			console.log('Fallback - Saving to localStorage:', { days, fallbackMeta });
-			localStorage.setItem('autoLogExport.days', JSON.stringify(days));
-			localStorage.setItem('autoLogExport.meta', JSON.stringify(fallbackMeta));
-			localStorage.setItem('autoLogExport.ready', 'true');
-			localStorage.setItem('autoLogExport.notice', 'Auto log filled (local estimate). You can now export the PDF.');
+			safeLocalStorage.setItem('autoLogExport.days', JSON.stringify(days));
+			safeLocalStorage.setItem('autoLogExport.meta', JSON.stringify(fallbackMeta));
+			safeLocalStorage.setItem('autoLogExport.ready', 'true');
+			safeLocalStorage.setItem('autoLogExport.notice', 'Auto log filled (local estimate). You can now export the PDF.');
 			alert('Auto log filling complete (local estimate). Redirecting to PDF Overlay.');
 			navigate('/overlay');
 		}
@@ -584,24 +638,6 @@ export const AutoLogExport: React.FC = () => {
 								<h2 className="text-2xl font-bold text-white drop-shadow-sm">Trip Details</h2>
 								<p className="text-blue-100 text-sm">Plan your route and generate log sheets</p>
 							</div>
-						</div>
-						
-						{/* Debug buttons */}
-						<div className="flex space-x-2">
-							<button
-								onClick={() => cacheManager.logCacheStatus()}
-								className="px-3 py-1 bg-white/20 text-white text-xs rounded hover:bg-white/30 transition-colors hidden"
-								title="Log Cache Status"
-							>
-								Debug
-							</button>
-							<button
-								onClick={() => cacheManager.clearCacheForTesting()}
-								className="px-3 py-1 bg-red-500/20 text-white text-xs rounded hover:bg-red-500/30 transition-colors hidden"
-								title="Clear Cache"
-							>
-								Clear
-							</button>
 						</div>
 					</div>
 				</div>
@@ -841,8 +877,6 @@ export const AutoLogExport: React.FC = () => {
           </div>
           </div>
 
-			{/* Bottom Section removed to prevent page scroll */}
-
 			{/* Route Information Display - Overlay on map */}
 			{routeData && showRouteInfo && (
 				<div className="absolute bottom-20 left-4 right-4 bg-white border border-gray-200 rounded-lg p-4 shadow-lg">
@@ -906,7 +940,6 @@ export const AutoLogExport: React.FC = () => {
             </div>
           )}
 
-
 			{/* Logs Content Overlay */}
 			{routeData && activeTab === 'logs' && (
 				<div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-6 max-w-4xl w-full mx-4">
@@ -929,9 +962,3 @@ export const AutoLogExport: React.FC = () => {
     </div>
   );
 };
-
-
-
-
-
-
