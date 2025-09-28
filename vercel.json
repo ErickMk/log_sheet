@@ -1,13 +1,11 @@
 {
   "version": 2,
   "builds": [
-    // ... (Your build configurations remain the same)
     {
       "src": "logsheet/package.json",
       "use": "@vercel/static-build",
       "config": { "distDir": "dist" }
     },
-    // ... (Python builds)
     {
       "src": "vercel_app.py",
       "use": "@vercel/python"
@@ -18,23 +16,12 @@
     }
   ],
   "routes": [
-    // 1. PYTHON API ROUTES
     { "src": "/api/(.*)", "dest": "backend/wsgi.py" },
-    
-    // 2. STATIC ASSET REWRITE: Directs requests for assets to their nested location
-    // We assume your static assets like main.js are requested via /assets/
-    // and are located in the build output at logsheet/dist/assets/
     { 
         "src": "/assets/(.*)", 
         "dest": "/logsheet/dist/assets/$1" 
     },
-    
-    // 3. FILESYSTEM CHECK
-    // This now only checks for other static files (like favicon.ico, etc.)
     { "handle": "filesystem" },
-    
-    // 4. SPA FALLBACK
-    // Serve the index.html from its expected build location
     { "src": "/(.*)", "dest": "/logsheet/dist/index.html" }
   ]
 }
