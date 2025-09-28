@@ -3,7 +3,7 @@ import { PdfCoordinateMapper } from './PdfCoordinateMapper';
 import { AutoLogExport } from './AutoLogExport';
 import { PdfOverlayPage } from './PdfOverlayPage';
 import type { LogDaySheetFields } from '../types/logsheet';
-import { exportTemplateBasedPDF, previewPdfTemplate } from '../utils/templatePdfExport';
+import { previewPdfTemplate } from '../utils/templatePdfExport';
 
 // Sample data for demonstration
 const sampleLogData: LogDaySheetFields = {
@@ -54,29 +54,7 @@ export const LogSheetDemo: React.FC = () => {
   };
 
 
-  // Removed unused function: handleTemplateBasedExport
-
-      // Export using template overlay
-      await exportTemplateBasedPDF(logData);
-      
-      // Reset button state
-      if (button) {
-        button.disabled = false;
-        button.textContent = 'Export Template PDF';
-      }
-      
-    } catch (error) {
-      console.error('Template export failed:', error);
-      alert('Failed to export template PDF. Please ensure Logsheet.pdf is in the public folder.');
-      
-      // Reset button state
-      const button = document.querySelector('[data-template-export-button]') as HTMLButtonElement;
-      if (button) {
-        button.disabled = false;
-        button.textContent = 'Export Template PDF';
-      }
-    }
-  };
+  // Template export function is removed as it's not used
 
   const handlePreviewTemplate = async () => {
     try {
@@ -244,4 +222,4 @@ export const LogSheetDemo: React.FC = () => {
       )}
     </div>
   );
-};
+}

@@ -306,7 +306,7 @@ async function overlayShipping(page: PDFPage, fields: LogDaySheetFields) {
 /**
  * Overlay recap information
  */
-async function overlayRecap(page: PDFPage, fields: LogDaySheetFields) {
+async function overlayRecap(page: PDFPage, _fields: LogDaySheetFields) {
   const coords = PDF_COORDINATES.recap;
   
   // Calculate totals (simplified)
@@ -348,8 +348,8 @@ interface FieldCoordinates {
 }
 
 // Helper function for drawing date fields
-function drawDateFields(ctx: CanvasRenderingContext2D, date: string, coordinates: FieldCoordinates) {
-  // Implementation
+function drawDateFields(_ctx: CanvasRenderingContext2D, _date: string, _coordinates: FieldCoordinates) {
+  // Implementation will be added when needed
 }
 
 export function drawDailyLogSheet(ctx: CanvasRenderingContext2D, data: DailyLogSheetData, coordinates: FieldCoordinates) {
