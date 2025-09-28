@@ -1,11 +1,13 @@
 {
   "version": 2,
   "builds": [
+    // ... (Your build configurations remain the same)
     {
       "src": "logsheet/package.json",
       "use": "@vercel/static-build",
       "config": { "distDir": "dist" }
     },
+    // ... (Your python builds remain the same)
     {
       "src": "vercel_app.py",
       "use": "@vercel/python"
@@ -16,8 +18,10 @@
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "backend/wsgi.py" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/logsheet/index.html" }
+    { "src": "/api/(.*)", "dest": "backend/wsgi.py" }, // API routes to Python backend
+    { "handle": "filesystem" },                        // Check for static files (including JS/CSS)
+    // 💡 THE FIX IS HERE: Change the fallback destination to the root index.html
+    // Vercel's static-build often promotes the files to the deployment root.
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
