@@ -159,9 +159,10 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
 
         // Render PDF page
         const renderContext = {
-          canvasContext: context,
-          viewport: viewport
-        };
+             canvasContext: context,
+             viewport: viewport,
+             canvas: canvas // Adding the missing canvas property
+           };
 
         await page.render(renderContext).promise;
         setPdfLoaded(true);
@@ -203,9 +204,10 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
           setPdfLoaded(true);
           console.log('PDF loaded successfully with alternative method');
           
-        } catch (secondError) {
+        } catch (secondError: unknown) {
           console.error('Alternative PDF loading also failed:', secondError);
-          setPdfError(`Failed to load PDF template. The PDF file may be corrupted or have compression issues. Please try:\n1. Re-saving the PDF with different compression settings\n2. Using a different PDF file\n3. Converting to a simpler PDF format\n\nError: ${secondError.message}`);
+          const errorMessage = secondError instanceof Error ? secondError.message : String(secondError);
+          setPdfError(`Failed to load PDF template. The PDF file may be corrupted or have compression issues. Please try:\n1. Re-saving the PDF with different compression settings\n2. Using a different PDF file\n3. Converting to a simpler PDF format\n\nError: ${errorMessage}`);
         }
       }
     };
@@ -217,15 +219,15 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
   useEffect(() => {
     if (!pdfLoaded) return;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const canvasElement = canvasRef.current;
+    if (!canvasElement) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvasElement.getContext('2d');
     if (!ctx) return;
 
     // Only redraw if we have coordinates to show
     if (Object.keys(coordinates).length > 0) {
-      drawCoordinateMarkers(ctx, canvas);
+      drawCoordinateMarkers(ctx, canvasElement);
     }
   }, [coordinates, pdfLoaded, zoom, panOffset]);
 
@@ -372,7 +374,7 @@ export const PdfCoordinateMapper: React.FC<PdfCoordinateMapperProps> = ({ onCoor
       };
       
       // Render PDF again
-      page.render(renderContext).promise.catch((error) => {
+      page.render(renderContext).promise.catch((error: Error) => {
         console.error('Error redrawing PDF after clear:', error);
       });
     }

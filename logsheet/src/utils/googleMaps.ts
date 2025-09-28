@@ -1,11 +1,20 @@
 // Lightweight Google Maps JS API loader using Vite env var
 // Ensures a single load and resolves when window.google.maps is available
 
-let mapsLoadingPromise: Promise<typeof google.maps> | null = null;
+// Add Google Maps types
+declare global {
+  interface Window {
+    google: {
+      maps: any;
+    };
+  }
+}
 
-export function loadGoogleMaps(libraries: Array<'places'> = ['places']): Promise<typeof google.maps> {
+let mapsLoadingPromise: Promise<any> | null = null;
+
+export function loadGoogleMaps(libraries: Array<'places'> = ['places']): Promise<any> {
 	if (typeof window !== 'undefined' && (window as any).google?.maps) {
-		return Promise.resolve((window as any).google.maps as typeof google.maps);
+		return Promise.resolve((window as any).google.maps);
 	}
 
 	if (mapsLoadingPromise) return mapsLoadingPromise;

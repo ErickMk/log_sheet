@@ -335,3 +335,10 @@ export function convertLogEntriesToPDFFormat(logEntriesUtc: Array<{ status: stri
     };
   });
 }
+
+export function drawDailyLogSheet(ctx: CanvasRenderingContext2D, data: DailyLogSheetData, coordinates: FieldCoordinates) {
+  // Remove the unused fields variable
+  
+  // Draw the date
+  drawDateFields(ctx, data.date, coordinates);
+}

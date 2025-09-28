@@ -181,8 +181,8 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     ctx.fillText(logData.homeTerminalAddress, coordinates.homeTerminalAddress.x, coordinates.homeTerminalAddress.y);
     ctx.fillText(logData.vehicleInfo, coordinates.vehicleInfo.x, coordinates.vehicleInfo.y);
     
-    ctx.fillText(`${dayData.dailyDistance.toFixed(1)} miles`, coordinates.mileageDriving.x, coordinates.mileageDriving.y);
-    ctx.fillText(`${dayData.cumulativeDistance.toFixed(1)} miles`, coordinates.mileageTotal.x, coordinates.mileageTotal.y);
+    ctx.fillText(`${dayData.dailyDistance ? dayData.dailyDistance.toFixed(1) : '0.0'} miles`, coordinates.mileageDriving.x, coordinates.mileageDriving.y);
+    ctx.fillText(`${dayData.cumulativeDistance ? dayData.cumulativeDistance.toFixed(1) : '0.0'} miles`, coordinates.mileageTotal.x, coordinates.mileageTotal.y);
 
     // Note: Individual log entries are not drawn as text on the PDF overlay
     // Only the log grid lines are drawn (see drawLogGrid below)
@@ -213,10 +213,10 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     console.log(`Day duty totals:`, dayDutyTotals);
 
     // Display total hours for each duty status
-    ctx.fillText(dayDutyTotals.OFF.toFixed(1), coordinates.offDutyTotal.x, coordinates.offDutyTotal.y);
-    ctx.fillText(dayDutyTotals.SB.toFixed(1), coordinates.sleeperBerthTotal.x, coordinates.sleeperBerthTotal.y);
-    ctx.fillText(dayDutyTotals.D.toFixed(1), coordinates.drivingTotal.x, coordinates.drivingTotal.y);
-    ctx.fillText(dayDutyTotals.ON.toFixed(1), coordinates.onDutyTotal.x, coordinates.onDutyTotal.y);
+    ctx.fillText(dayDutyTotals.OFF ? dayDutyTotals.OFF.toFixed(1) : '0.0', coordinates.offDutyTotal.x, coordinates.offDutyTotal.y);
+      ctx.fillText(dayDutyTotals.SB ? dayDutyTotals.SB.toFixed(1) : '0.0', coordinates.sleeperBerthTotal.x, coordinates.sleeperBerthTotal.y);
+      ctx.fillText(dayDutyTotals.D ? dayDutyTotals.D.toFixed(1) : '0.0', coordinates.drivingTotal.x, coordinates.drivingTotal.y);
+      ctx.fillText(dayDutyTotals.ON ? dayDutyTotals.ON.toFixed(1) : '0.0', coordinates.onDutyTotal.x, coordinates.onDutyTotal.y);
 
     // Draw the log grid lines (this is what was missing!)
     // Temporarily set logData.logEntriesUtc to this day's data for drawLogGrid
@@ -243,7 +243,7 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
 
     setIsExporting(true);
     try {
-      const { PDFDocument, rgb } = await import('pdf-lib');
+      const { PDFDocument } = await import('pdf-lib');
       
       // Create a new PDF document
       const pdfDoc = await PDFDocument.create();
@@ -618,10 +618,10 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
     console.log('Duty totals calculated:', dutyTotals);
     
     // Display total hours for each duty status
-    ctx.fillText(dutyTotals.OFF.toFixed(1), coordinates.offDutyTotal.x, coordinates.offDutyTotal.y);
-    ctx.fillText(dutyTotals.SB.toFixed(1), coordinates.sleeperBerthTotal.x, coordinates.sleeperBerthTotal.y);
-    ctx.fillText(dutyTotals.D.toFixed(1), coordinates.drivingTotal.x, coordinates.drivingTotal.y);
-    ctx.fillText(dutyTotals.ON.toFixed(1), coordinates.onDutyTotal.x, coordinates.onDutyTotal.y);
+    ctx.fillText(dutyTotals.OFF ? dutyTotals.OFF.toFixed(1) : '0.0', coordinates.offDutyTotal.x, coordinates.offDutyTotal.y);
+      ctx.fillText(dutyTotals.SB ? dutyTotals.SB.toFixed(1) : '0.0', coordinates.sleeperBerthTotal.x, coordinates.sleeperBerthTotal.y);
+      ctx.fillText(dutyTotals.D ? dutyTotals.D.toFixed(1) : '0.0', coordinates.drivingTotal.x, coordinates.drivingTotal.y);
+      ctx.fillText(dutyTotals.ON ? dutyTotals.ON.toFixed(1) : '0.0', coordinates.onDutyTotal.x, coordinates.onDutyTotal.y);
 
     // Draw log grid lines (continuous polyline midnight -> midnight)
     drawLogGrid(ctx);
@@ -813,8 +813,8 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
                date: dayDate,
                startLocation: day.start_location,
                endLocation: day.end_location,
-               dailyDistance: day.daily_distance,  // Distance driven this day
-               cumulativeDistance: day.cumulative_distance,  // Total distance from start
+               dailyDistance: day.distance_covered,  // Distance driven this day
+               cumulativeDistance: day.total_distance,  // Total distance from start
                drivingHours: day.driving_hours,
                logEntries: dayLogEntries,
                dutyStatusEntries: dutyStatusEntries
@@ -916,10 +916,10 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
                          <strong>To:</strong> {sheet.endLocation}
                        </div>
                        <div>
-                         <strong>Daily Distance:</strong> {sheet.dailyDistance.toFixed(1)} miles
+                         <strong>Daily Distance:</strong> {sheet.dailyDistance ? sheet.dailyDistance.toFixed(1) : '0.0'} miles
                        </div>
                        <div>
-                         <strong>Cumulative Distance:</strong> {sheet.cumulativeDistance.toFixed(1)} miles
+                         <strong>Cumulative Distance:</strong> {sheet.cumulativeDistance ? sheet.cumulativeDistance.toFixed(1) : '0.0'} miles
                        </div>
                      </div>
             </div>
@@ -1023,8 +1023,8 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
                                <label className="block text-sm font-medium text-gray-700 mb-1">Daily Distance Driven</label>
                                <input
                                  type="text"
-                                 value={`${sheet.dailyDistance.toFixed(1)} miles`}
-                                 readOnly
+                                 value={`${sheet && sheet.dailyDistance ? sheet.dailyDistance.toFixed(1) : '0.0'} miles`}
+                                 disabled={true}
                                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
                                />
                              </div>
@@ -1032,8 +1032,8 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
                                <label className="block text-sm font-medium text-gray-700 mb-1">Cumulative Distance from Start</label>
                                <input
                                  type="text"
-                                 value={`${sheet.cumulativeDistance.toFixed(1)} miles`}
-                                 readOnly
+                                 value={`${sheet && sheet.cumulativeDistance ? sheet.cumulativeDistance.toFixed(1) : '0.0'} miles`}
+                                 disabled={true}
                                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
                                />
                              </div>
@@ -1050,8 +1050,8 @@ export const PdfOverlayPage: React.FC<PdfOverlayPageProps> = ({ tripData }) => {
                     <div key={entryIndex} className="flex items-center space-x-3 p-3 bg-white rounded border">
                       <select
                         value={entry.status}
-                        readOnly
-                        className="px-3 py-1 border border-gray-300 rounded bg-gray-100"
+                        disabled={true}
+                        className="duty-status-select"
                       >
                         <option value="OFF">OFF</option>
                         <option value="SB">SB</option>
