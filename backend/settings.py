@@ -34,41 +34,28 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 # DATABASE CONFIGURATION (Supabase/Vercel)
 # ===============================================
 
-# 1. Prioritize the known non-pooling variable from your Vercel configuration.
-# NOTE: Vercel often requires POSTGRES_URL_NON_POOLING for Django/Supabase.
-DATABASE_URL = os.getenv('POSTGRES_URL_NON_POOLING')
+# CRITICAL: Replace 'YOUR_VERCEL_DB_VARIABLE' with the exact name 
+# you set in the Vercel dashboard (e.g., 'DATABASE_URL')
+DATABASE_URL = os.getenv('DATABASE_URL') 
 
-# 2. Fallback to common Vercel/Supabase variables
-if not DATABASE_URL:
-    DATABASE_URL = os.getenv('DATABASE_URL')
-
-if not DATABASE_URL:
-    DATABASE_URL = os.getenv('POSTGRES_PRISMA_URL')
-
-# --- CRITICAL: INITIALIZE THE DATABASES DICTIONARY ---
 DATABASES = {}
 
 if DATABASE_URL:
-    # Production Configuration (Uses Supabase URL)
-
-    # 3. Clean up the URL for dj_database_url compatibility
-    # We strip ALL query parameters (everything after the '?') which often contain
-    # pooling settings that break Django's direct connection.
+    # 1. Clean up URL (remove query parameters and replace pooling port)
     if '?' in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.split('?')[0]
-
-    # Vercel/Supabase often uses port 6543 for pooling, but we need the direct 5432 port for Django.
+    
+    # Supabase uses port 6543 for pooling. Change it to the direct port 5432.
     DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
 
-    # Connect using dj_database_url, enforcing SSL as required by Supabase.
+    # 2. Connect using dj_database_url, enforcing SSL.
     DATABASES['default'] = dj_database_url.parse(
         DATABASE_URL,
         conn_max_age=600,
         ssl_require=True
     )
 else:
-    # Local Development Configuration (Uses SQLite)
-    # This configuration is only used if no environment variable is found.
+    # Local Development Configuration (SQLite fallback)
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
