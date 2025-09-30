@@ -40,11 +40,9 @@ if not DATABASE_URL:
     DATABASE_URL = os.getenv('DATABASE_URL') 
 
 if DATABASE_URL:
-    # IMPORTANT: Supabase/Vercel URLs often include connection pooler parameters
-    # like 'pgbouncer=true' that cause psycopg2 errors.
-    # We remove these unsupported parameters manually before parsing.
+    # IMPORTANT: Remove connection pooler parameters like 'pgbouncer' 
+    # to avoid the "invalid connection option 'pgbouncer'" error.
     if 'pgbouncer' in DATABASE_URL:
-        # Strip unsupported parameters like pgbouncer=true
         DATABASE_URL = DATABASE_URL.split('?')[0]
         
     DATABASES = {
