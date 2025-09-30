@@ -3,6 +3,7 @@ Django settings for backend project.
 """
 from pathlib import Path
 import os
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,46 +15,62 @@ DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.com"]
 
 # ===============================================
-# DATABASE - Using Supabase Transaction Pooler
+# DATABASE CONFIGURATION
 # ===============================================
 
 print("=" * 60)
 print("DATABASE CONFIGURATION")
 print("=" * 60)
 
-# Get password from environment
-POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
+# Get DATABASE_URL from environment (Neon connection string)
+DATABASE_URL = os.getenv('DATABASE_URL')
 
-if POSTGRES_PASSWORD:
-    print(f"[INFO] Password found (length: {len(POSTGRES_PASSWORD)})")
+if DATABASE_URL:
+    print(f"[INFO] DATABASE_URL found")
     
-    # HARDCODED for Supabase Transaction Pooler (IPv4-compatible)
-    # Using pgbouncer in transaction mode
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'postgres',
-            'USER': 'postgres.mxwhovimordatihksosb',
-            'PASSWORD': POSTGRES_PASSWORD,
-            'HOST': 'aws-1-us-east-1.pooler.supabase.com',
-            'PORT': '6543',
-            'CONN_MAX_AGE': 0,  # CRITICAL: Must be 0 for pgbouncer transaction mode
-            'DISABLE_SERVER_SIDE_CURSORS': True,  # CRITICAL: Required for pgbouncer
-            'OPTIONS': {
-                'sslmode': 'require',
-                'connect_timeout': 10,
-                # pgbouncer transaction mode settings
-                'options': '-c statement_timeout=30000 -c idle_in_transaction_session_timeout=30000',
+    # Parse the connection URL
+    # Format: postgresql://user:password@host:port/database
+    match = re.match(r'postgres(?:ql)?://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)', DATABASE_URL)
+    
+    if match:
+        db_user = match.group(1)
+        db_password = match.group(2)
+        db_host = match.group(3)
+        db_port = match.group(4)
+        db_name = match.group(5)
+        
+        print(f"  User: {db_user}")
+        print(f"  Host: {db_host}")
+        print(f"  Port: {db_port}")
+        print(f"  Database: {db_name}")
+        
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': db_name,
+                'USER': db_user,
+                'PASSWORD': db_password,
+                'HOST': db_host,
+                'PORT': db_port,
+                'CONN_MAX_AGE': 0,  # Serverless-friendly
+                'OPTIONS': {
+                    'sslmode': 'require',
+                    'connect_timeout': 10,
+                }
             }
         }
-    }
-    
-    print("[SUCCESS] Database configured for Supabase Transaction Pooler")
-    print(f"  - Host: aws-1-us-east-1.pooler.supabase.com:6543")
-    print(f"  - User: postgres.mxwhovimordatihksosb")
-    print(f"  - Mode: Transaction pooling (pgbouncer)")
+        
+        print("[SUCCESS] Database configured from DATABASE_URL")
+    else:
+        print("[ERROR] Could not parse DATABASE_URL")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 else:
-    print("[WARNING] POSTGRES_PASSWORD not found - using SQLite")
+    print("[WARNING] DATABASE_URL not found - using SQLite")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -63,6 +80,10 @@ else:
 
 print("=" * 60)
 print()
+
+# ===============================================
+# END DATABASE CONFIGURATION
+# ===============================================
 
 # Application definition
 INSTALLED_APPS = [
