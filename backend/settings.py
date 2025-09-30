@@ -33,45 +33,47 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 # ===============================================
 # DATABASE CONFIGURATION (Supabase/Vercel)
 # ===============================================
+
 # 1. Prioritize the known non-pooling variable from your Vercel configuration.
+# NOTE: Vercel often requires POSTGRES_URL_NON_POOLING for Django/Supabase.
 DATABASE_URL = os.getenv('POSTGRES_URL_NON_POOLING')
 
 # 2. Fallback to common Vercel/Supabase variables
 if not DATABASE_URL:
-    DATABASE_URL = os.getenv('DATABASE_URL') 
+    DATABASE_URL = os.getenv('DATABASE_URL')
 
 if not DATABASE_URL:
-    DATABASE_URL = os.getenv('POSTGRES_PRISMA_URL') 
+    DATABASE_URL = os.getenv('POSTGRES_PRISMA_URL')
+
+# --- CRITICAL: INITIALIZE THE DATABASES DICTIONARY ---
+DATABASES = {}
 
 if DATABASE_URL:
-    # --- CRITICAL FINAL FIX FOR PGBOUNCER/SUPABASE ---
-    
-    # We strip ALL query parameters (everything after the '?') to guarantee 
-    # that 'pgbouncer=true' and 'sslmode=require' are removed, as dj-database-url 
-    # and the underlying libraries handle SSL automatically when ssl_require=True.
+    # Production Configuration (Uses Supabase URL)
+
+    # 3. Clean up the URL for dj_database_url compatibility
+    # We strip ALL query parameters (everything after the '?') which often contain
+    # pooling settings that break Django's direct connection.
     if '?' in DATABASE_URL:
-        # Use only the base URI part (the DSN)
         DATABASE_URL = DATABASE_URL.split('?')[0]
-    
-    # Optional: If the URI still contains the pooler port (6543), swap it to the direct port (5432).
-    # Based on your non-pooling URL, it already uses port 5432, but this is a safe check.
+
+    # Vercel/Supabase often uses port 6543 for pooling, but we need the direct 5432 port for Django.
     DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
 
-    DATABASES = {
-        'default': dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=True  # Ensure SSL is enforced for PostgreSQL
-        )
-    }
+    # Connect using dj_database_url, enforcing SSL as required by Supabase.
+    DATABASES['default'] = dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        ssl_require=True
+    )
 else:
-    # Fallback to local SQLite for local development
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+    # Local Development Configuration (Uses SQLite)
+    # This configuration is only used if no environment variable is found.
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+
 # ===============================================
 # END DATABASE CONFIGURATION
 # ===============================================
