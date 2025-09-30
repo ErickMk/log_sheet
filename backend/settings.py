@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 from pathlib import Path
 import os
-import dj_database_url # Keep this import
+import dj_database_url
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -35,32 +35,41 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 # ===============================================
 
 # 1. Attempt to get the database URL from the environment.
-# We prioritize the environment variable Vercel is known to use for production DBs.
 DATABASE_URL = os.getenv('DATABASE_URL') 
 if not DATABASE_URL:
     DATABASE_URL = os.getenv('POSTGRES_URL_NON_POOLING')
     
-# 2. Check if a database URL was found. If so, clean it up for Django.
-if DATABASE_URL:
-    # IMPORTANT: Remove query params (like pooling config) as they confuse Django/dj_database_url
-    if '?' in DATABASE_URL:
-        DATABASE_URL = DATABASE_URL.split('?')[0]
-    
-    # IMPORTANT: Replace pooling port (6543) with the direct port (5432) for Django
-    DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
-    
-    # 3. Use the parsed, cleaned URL for the default database connection.
-    # We must explicitly pass the SSL requirement for Supabase/Vercel.
-    DATABASES = {
-        'default': dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=True
-        )
-    }
-
-# 4. Fallback for Local Development (if no DATABASE_URL is found)
+# 2. Check if a valid database URL was found
+if DATABASE_URL and DATABASE_URL.strip():  # Added check for empty string
+    try:
+        # IMPORTANT: Remove query params (like pooling config) as they confuse Django/dj_database_url
+        if '?' in DATABASE_URL:
+            DATABASE_URL = DATABASE_URL.split('?')[0]
+        
+        # IMPORTANT: Replace pooling port (6543) with the direct port (5432) for Django
+        DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
+        
+        # 3. Use the parsed, cleaned URL for the default database connection.
+        DATABASES = {
+            'default': dj_database_url.parse(
+                DATABASE_URL,
+                conn_max_age=600,
+                ssl_require=True
+            )
+        }
+        print("✓ Connected to production database")
+    except Exception as e:
+        print(f"Error parsing DATABASE_URL: {e}")
+        print(f"DATABASE_URL value: {DATABASE_URL[:50]}...")  # Only show first 50 chars for security
+        # Fallback to SQLite if parsing fails
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 else:
+    # 4. Fallback for Local Development (if no DATABASE_URL is found)
     print("Warning: DATABASE_URL not found. Falling back to local SQLite.")
     DATABASES = {
         'default': {
