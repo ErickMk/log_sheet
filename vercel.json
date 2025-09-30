@@ -14,7 +14,7 @@
       "src": "backend/wsgi.py",
       "use": "@vercel/python",
       "config": {
-        "maxDuration": 60,
+        "maxDuration": 59,
         "runtime": "python3.12"
       }
     }
