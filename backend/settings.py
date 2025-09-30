@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 from pathlib import Path
 import os
-import sys
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (for local development)
@@ -34,67 +33,36 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 
 
 # ===============================================
-# DATABASE CONFIGURATION (Direct PostgreSQL)
+# DATABASE CONFIGURATION (Hardcoded for AWS Lambda)
 # ===============================================
 
 print("=" * 60)
-print("DATABASE CONFIGURATION DEBUG")
+print("DATABASE CONFIGURATION")
 print("=" * 60)
 
-# Get database credentials from environment
-POSTGRES_USER = os.getenv('POSTGRES_USER')
+# Get password from environment (only dynamic value)
 POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
-POSTGRES_HOST = os.getenv('POSTGRES_HOST')
-POSTGRES_DATABASE = os.getenv('POSTGRES_DATABASE', 'postgres')
 
-# CRITICAL FIX: AWS Lambda has poor IPv6 support
-# Supabase's direct host (db.*.supabase.co) resolves to IPv6
-# We need to use the pooler which has better IPv4 support
-if POSTGRES_HOST and 'db.' in POSTGRES_HOST and '.supabase.co' in POSTGRES_HOST:
-    # Extract project reference
-    project_ref = POSTGRES_HOST.replace('db.', '').replace('.supabase.co', '')
-    # Use AWS-specific pooler endpoint (IPv4-friendly)
-    POSTGRES_HOST = f'aws-0-us-east-1.pooler.supabase.com'
-    POSTGRES_PORT = '6543'  # Pooler uses port 6543
-    print(f"[FIX] Detected Supabase direct host - switching to AWS pooler")
-    print(f"[FIX] Project reference: {project_ref}")
-    print(f"[FIX] New host: {POSTGRES_HOST}:{POSTGRES_PORT}")
-else:
-    POSTGRES_PORT = '5432'  # Standard PostgreSQL port
+# Hardcoded values optimized for AWS Lambda / Vercel
+POSTGRES_USER = 'postgres.mxwhovimordatihksosb'
+POSTGRES_HOST = 'aws-1-us-east-1.pooler.supabase.com'
+POSTGRES_PORT = '6543'
+POSTGRES_DATABASE = 'postgres'
 
-# Also check for alternative environment variable names
-if not POSTGRES_USER:
-    POSTGRES_USER = os.getenv('PGUSER')
-if not POSTGRES_PASSWORD:
-    POSTGRES_PASSWORD = os.getenv('PGPASSWORD')
-if not POSTGRES_HOST:
-    POSTGRES_HOST = os.getenv('PGHOST')
-if not POSTGRES_DATABASE:
-    POSTGRES_DATABASE = os.getenv('PGDATABASE', 'postgres')
-
-# Detailed debug output
 print(f"POSTGRES_USER: {POSTGRES_USER}")
 print(f"POSTGRES_HOST: {POSTGRES_HOST}")
 print(f"POSTGRES_PORT: {POSTGRES_PORT}")
 print(f"POSTGRES_DATABASE: {POSTGRES_DATABASE}")
 print(f"POSTGRES_PASSWORD present: {bool(POSTGRES_PASSWORD)}")
+
 if POSTGRES_PASSWORD:
     print(f"POSTGRES_PASSWORD length: {len(POSTGRES_PASSWORD)}")
-    print(f"POSTGRES_PASSWORD first 3 chars: {POSTGRES_PASSWORD[:3]}...")
 
 print("=" * 60)
 
-# Check if we have all required PostgreSQL credentials
-if all([POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST]):
-    print("[SUCCESS] All PostgreSQL credentials found - configuring PostgreSQL")
-    
-    # Check if psycopg2 is available
-    try:
-        import psycopg2
-        print("[SUCCESS] psycopg2 module found")
-    except ImportError as e:
-        print(f"[ERROR] psycopg2 not found: {e}")
-        print("[INFO] You may need to add 'psycopg2-binary' to requirements.txt")
+# Configure database if password is available
+if POSTGRES_PASSWORD:
+    print("[SUCCESS] Password found - configuring PostgreSQL with hardcoded pooler settings")
     
     DATABASES = {
         'default': {
@@ -116,10 +84,7 @@ if all([POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST]):
     
 else:
     # Fallback to SQLite for local development
-    print("[WARNING] PostgreSQL credentials incomplete - falling back to SQLite")
-    print(f"  POSTGRES_USER present: {bool(POSTGRES_USER)}")
-    print(f"  POSTGRES_PASSWORD present: {bool(POSTGRES_PASSWORD)}")
-    print(f"  POSTGRES_HOST present: {bool(POSTGRES_HOST)}")
+    print("[WARNING] POSTGRES_PASSWORD not found - falling back to SQLite")
     
     DATABASES = {
         'default': {
