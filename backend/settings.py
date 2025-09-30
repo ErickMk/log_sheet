@@ -37,10 +37,24 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 # 1. Attempt to get the database URL from the environment.
 # Try multiple possible environment variable names
 DATABASE_URL = os.getenv('DATABASE_URL') 
+
+# If no DATABASE_URL, try to build one from components
 if not DATABASE_URL:
-    DATABASE_URL = os.getenv('POSTGRES_URL_NON_POOLING')
-if not DATABASE_URL:
-    DATABASE_URL = os.getenv('POSTGRES_URL')
+    # Check if we have the individual Postgres components
+    pg_user = os.getenv('POSTGRES_USER')
+    pg_password = os.getenv('POSTGRES_PASSWORD')
+    pg_host = os.getenv('POSTGRES_HOST')
+    pg_database = os.getenv('POSTGRES_DATABASE')
+    
+    if all([pg_user, pg_password, pg_host, pg_database]):
+        # Build the direct connection URL (not pooled)
+        DATABASE_URL = f"postgresql://{pg_user}:{pg_password}@{pg_host}:5432/{pg_database}"
+        print(f"Built DATABASE_URL from components using host: {pg_host}")
+    else:
+        # Fallback to the provided POSTGRES_URL variables
+        DATABASE_URL = os.getenv('POSTGRES_URL_NON_POOLING')
+        if not DATABASE_URL:
+            DATABASE_URL = os.getenv('POSTGRES_URL')
     
 # 2. Check if a valid database URL was found
 if DATABASE_URL and DATABASE_URL.strip():  # Added check for empty string
@@ -49,12 +63,21 @@ if DATABASE_URL and DATABASE_URL.strip():  # Added check for empty string
         if '?' in DATABASE_URL:
             DATABASE_URL = DATABASE_URL.split('?')[0]
         
-        # IMPORTANT: Replace pooling port (6543) with the direct port (5432) for Django
-        # Also handle cases where the URL uses port 6543 for pooling
+        # IMPORTANT: Replace pooler host with direct host if needed
+        # Supabase pooler should be replaced with direct connection
+        if 'pooler.supabase.com' in DATABASE_URL:
+            # Extract the project ref from the pooler URL
+            parts = DATABASE_URL.split('@')
+            if len(parts) == 2:
+                credentials = parts[0]
+                host_and_db = parts[1]
+                # Replace pooler host with direct host format
+                host_and_db = host_and_db.replace('.pooler.supabase.com:', '.supabase.co:')
+                DATABASE_URL = f"{credentials}@{host_and_db}"
+                print("Replaced pooler host with direct connection host")
+        
+        # Ensure we're using direct port (5432) not pooler port (6543)
         DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
-        # If using POSTGRES_URL (pooled), ensure we're using direct connection
-        if 'pooler' in DATABASE_URL or ':6543' in DATABASE_URL:
-            DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
         
         # 3. Use the parsed, cleaned URL for the default database connection.
         DATABASES = {
