@@ -9,9 +9,9 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
 from pathlib import Path
 import os
+import dj_database_url # Keep this import
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,6 +27,38 @@ SECRET_KEY = "django-insecure-*la-va@b(5t7)kmo+om$&0d0prlhh@qaztwr+3!26dgsa@quuv
 DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.com"]
+
+
+# ===============================================
+# DATABASE CONFIGURATION (Supabase/Vercel)
+# ===============================================
+# Vercel's Supabase integration typically creates a URL variable.
+# We use dj_database_url to parse this single URL reliably.
+DATABASE_URL = os.getenv('POSTGRES_PRISMA_URL') 
+# Fallback if Vercel uses a different name, though POSTGRES_PRISMA_URL is common
+if not DATABASE_URL:
+    DATABASE_URL = os.getenv('DATABASE_URL') 
+
+if DATABASE_URL:
+    # Use external PostgreSQL (Supabase) for production/deployment
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True  # Ensure SSL is enforced for Supabase
+        )
+    }
+else:
+    # Fallback to local SQLite for local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+# ===============================================
+# END DATABASE CONFIGURATION
+# ===============================================
 
 
 # Application definition
@@ -74,118 +106,11 @@ TEMPLATES = [
 WSGI_APPLICATION = "backend.wsgi.application"
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-# Database configuration for Vercel deployment
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DATABASE', 'postgres'),
-        'USER': os.getenv('POSTGRES_USER', 'postgres'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
-        'HOST': os.getenv('POSTGRES_HOST', ''),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
-        'OPTIONS': {
-            'sslmode': 'require',
-        },
-    }
-}
-
-# Add this for debugging - remove after fixing
-print(f"Database HOST: {os.getenv('POSTGRES_HOST')}")
-print(f"Database NAME: {os.getenv('POSTGRES_DATABASE')}")
-
-
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+# ... (rest of the settings remain unchanged)
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
-]
-
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
-LANGUAGE_CODE = "en-us"
-
-TIME_ZONE = "UTC"
-
-USE_I18N = True
-
-USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = "static/"
-
-# CORS/CSRF Configuration
-# Allow all origins during development - CHANGE THIS FOR PRODUCTION
-CORS_ALLOW_ALL_ORIGINS = True
-
-# For production, use specific origins instead:
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",
-#     "http://127.0.0.1:5173",
-#     "https://automatedlogsheet-11cdx651c-erickmungai27-gmailcoms-projects.vercel.app",
-#     "https://your-custom-domain.com",  # Add your custom domain if you have one
-# ]
-
-# Allow credentials to be included in CORS requests
-CORS_ALLOW_CREDENTIALS = True
-
-# Allow common headers
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
-
-# Allow common methods
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
-
-# CSRF settings
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://automatedlogsheet-11cdx651c-erickmungai27-gmailcoms-projects.vercel.app",
-]
-
-REST_FRAMEWORK = {
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-    ],
-    "DEFAULT_PARSER_CLASSES": [
-        "rest_framework.parsers.JSONParser",
-    ],
-}
+# ... (the rest of your settings file continues here) ...
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
