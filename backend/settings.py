@@ -39,9 +39,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 
 # 1. Attempt to get the database URL from the environment.
 # Try multiple possible environment variable names
-# DATABASE_URL = os.getenv('DATABASE_URL') 
-# TEMPORARY TEST - hardcode the database URL
-DATABASE_URL = "postgresql://postgres:6EuCQOWRUNmHPSfG@db.mxwhovimordatihksosb.supabase.co:5432/postgres"
+DATABASE_URL = os.getenv('DATABASE_URL') 
 
 # Debug: Print what we're finding
 print(f"DEBUG: DATABASE_URL from env: {DATABASE_URL}")
@@ -92,12 +90,19 @@ if DATABASE_URL and DATABASE_URL.strip():  # Added check for empty string
         DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
         
         # 3. Use the parsed, cleaned URL for the default database connection.
+        # Use transaction mode for pooler connections
         DATABASES = {
             'default': dj_database_url.parse(
                 DATABASE_URL,
-                conn_max_age=600,
-                ssl_require=True
+                conn_max_age=0,  # Disable connection pooling for pgbouncer compatibility
+                ssl_require=True,
+                conn_health_checks=True,
             )
+        }
+        # Override options for pgbouncer transaction mode
+        DATABASES['default']['OPTIONS'] = {
+            'sslmode': 'require',
+            'connect_timeout': 10,
         }
         print("✓ Connected to production database")
     except Exception as e:
