@@ -34,31 +34,39 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 # DATABASE CONFIGURATION (Supabase/Vercel)
 # ===============================================
 
-# CRITICAL: Replace 'YOUR_VERCEL_DB_VARIABLE' with the exact name 
-# you set in the Vercel dashboard (e.g., 'DATABASE_URL')
+# 1. Attempt to get the database URL from the environment.
+# We prioritize the environment variable Vercel is known to use for production DBs.
 DATABASE_URL = os.getenv('DATABASE_URL') 
-
-DATABASES = {}
-
+if not DATABASE_URL:
+    DATABASE_URL = os.getenv('POSTGRES_URL_NON_POOLING')
+    
+# 2. Check if a database URL was found. If so, clean it up for Django.
 if DATABASE_URL:
-    # 1. Clean up URL (remove query parameters and replace pooling port)
+    # IMPORTANT: Remove query params (like pooling config) as they confuse Django/dj_database_url
     if '?' in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.split('?')[0]
     
-    # Supabase uses port 6543 for pooling. Change it to the direct port 5432.
+    # IMPORTANT: Replace pooling port (6543) with the direct port (5432) for Django
     DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
+    
+    # 3. Use the parsed, cleaned URL for the default database connection.
+    # We must explicitly pass the SSL requirement for Supabase/Vercel.
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
 
-    # 2. Connect using dj_database_url, enforcing SSL.
-    DATABASES['default'] = dj_database_url.parse(
-        DATABASE_URL,
-        conn_max_age=600,
-        ssl_require=True
-    )
+# 4. Fallback for Local Development (if no DATABASE_URL is found)
 else:
-    # Local Development Configuration (SQLite fallback)
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    print("Warning: DATABASE_URL not found. Falling back to local SQLite.")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
 
 # ===============================================
