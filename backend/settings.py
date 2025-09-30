@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 from pathlib import Path
 import os
-import dj_database_url
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (for local development)
@@ -34,90 +33,47 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 
 
 # ===============================================
-# DATABASE CONFIGURATION (Supabase/Vercel)
+# DATABASE CONFIGURATION (Direct PostgreSQL)
 # ===============================================
 
-# 1. Attempt to get the database URL from the environment.
-# Try multiple possible environment variable names
-DATABASE_URL = os.getenv('DATABASE_URL') 
+# Get database credentials from environment
+POSTGRES_USER = os.getenv('POSTGRES_USER')
+POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
+POSTGRES_HOST = os.getenv('POSTGRES_HOST')
+POSTGRES_DATABASE = os.getenv('POSTGRES_DATABASE', 'postgres')
 
-# Debug: Print what we're finding
-print(f"DEBUG: DATABASE_URL from env: {DATABASE_URL}")
-print(f"DEBUG: POSTGRES_USER from env: {os.getenv('POSTGRES_USER')}")
-print(f"DEBUG: POSTGRES_HOST from env: {os.getenv('POSTGRES_HOST')}")
+# Debug output
+print(f"DEBUG: POSTGRES_USER = {POSTGRES_USER}")
+print(f"DEBUG: POSTGRES_HOST = {POSTGRES_HOST}")
+print(f"DEBUG: POSTGRES_DATABASE = {POSTGRES_DATABASE}")
+print(f"DEBUG: POSTGRES_PASSWORD exists = {bool(POSTGRES_PASSWORD)}")
 
-# If no DATABASE_URL, try to build one from components
-if not DATABASE_URL:
-    # Check if we have the individual Postgres components
-    pg_user = os.getenv('POSTGRES_USER')
-    pg_password = os.getenv('POSTGRES_PASSWORD')
-    pg_host = os.getenv('POSTGRES_HOST')
-    pg_database = os.getenv('POSTGRES_DATABASE')
+# Check if we have all required PostgreSQL credentials
+if all([POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST]):
+    print("✓ All PostgreSQL credentials found - using PostgreSQL")
     
-    if all([pg_user, pg_password, pg_host, pg_database]):
-        # Build the direct connection URL (not pooled)
-        DATABASE_URL = f"postgresql://{pg_user}:{pg_password}@{pg_host}:5432/{pg_database}"
-        print(f"Built DATABASE_URL from components using host: {pg_host}")
-    else:
-        print(f"DEBUG: Missing components - user:{pg_user}, host:{pg_host}, db:{pg_database}")
-        # Fallback to the provided POSTGRES_URL variables
-        DATABASE_URL = os.getenv('POSTGRES_URL_NON_POOLING')
-        if not DATABASE_URL:
-            DATABASE_URL = os.getenv('POSTGRES_URL')
-        print(f"DEBUG: Fallback DATABASE_URL: {DATABASE_URL[:50] if DATABASE_URL else None}")
-    
-# 2. Check if a valid database URL was found
-if DATABASE_URL and DATABASE_URL.strip():  # Added check for empty string
-    try:
-        # IMPORTANT: Remove query params (like pooling config) as they confuse Django/dj_database_url
-        if '?' in DATABASE_URL:
-            DATABASE_URL = DATABASE_URL.split('?')[0]
-        
-        # IMPORTANT: Replace pooler host with direct host if needed
-        # Supabase pooler should be replaced with direct connection
-        if 'pooler.supabase.com' in DATABASE_URL:
-            # Extract the project ref from the pooler URL
-            parts = DATABASE_URL.split('@')
-            if len(parts) == 2:
-                credentials = parts[0]
-                host_and_db = parts[1]
-                # Replace pooler host with direct host format
-                host_and_db = host_and_db.replace('.pooler.supabase.com:', '.supabase.co:')
-                DATABASE_URL = f"{credentials}@{host_and_db}"
-                print("Replaced pooler host with direct connection host")
-        
-        # Ensure we're using direct port (5432) not pooler port (6543)
-        DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
-        
-        # 3. Use the parsed, cleaned URL for the default database connection.
-        # Use transaction mode for pooler connections
-        DATABASES = {
-            'default': dj_database_url.parse(
-                DATABASE_URL,
-                conn_max_age=0,  # Disable connection pooling for pgbouncer compatibility
-                ssl_require=True,
-                conn_health_checks=True,
-            )
-        }
-        # Override options for pgbouncer transaction mode
-        DATABASES['default']['OPTIONS'] = {
-            'sslmode': 'require',
-            'connect_timeout': 10,
-        }
-        print("✓ Connected to production database")
-    except Exception as e:
-        print(f"Error parsing DATABASE_URL: {e}")
-        print(f"DATABASE_URL value: {DATABASE_URL[:50]}...")  # Only show first 50 chars for security
-        # Fallback to SQLite if parsing fails
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': POSTGRES_DATABASE,
+            'USER': POSTGRES_USER,
+            'PASSWORD': POSTGRES_PASSWORD,
+            'HOST': POSTGRES_HOST,
+            'PORT': '5432',
+            'CONN_MAX_AGE': 0,  # Disable persistent connections for serverless
+            'OPTIONS': {
+                'sslmode': 'require',
+                'connect_timeout': 10,
             }
         }
+    }
 else:
-    # 4. Fallback for Local Development (if no DATABASE_URL is found)
-    print("Warning: DATABASE_URL not found. Falling back to local SQLite.")
+    # Fallback to SQLite for local development
+    print("⚠ PostgreSQL credentials incomplete - falling back to SQLite")
+    print(f"  - POSTGRES_USER: {bool(POSTGRES_USER)}")
+    print(f"  - POSTGRES_PASSWORD: {bool(POSTGRES_PASSWORD)}")
+    print(f"  - POSTGRES_HOST: {bool(POSTGRES_HOST)}")
+    
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -177,11 +133,44 @@ WSGI_APPLICATION = "backend.wsgi.application"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-# ... (rest of the settings remain unchanged)
 
-# ... (the rest of your settings file continues here) ...
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+]
+
+
+# Internationalization
+# https://docs.djangoproject.com/en/5.2/topics/i18n/
+
+LANGUAGE_CODE = "en-us"
+
+TIME_ZONE = "UTC"
+
+USE_I18N = True
+
+USE_TZ = True
+
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.2/howto/static-files/
+
+STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# CORS Settings
+CORS_ALLOW_ALL_ORIGINS = True  # For development - restrict in production
