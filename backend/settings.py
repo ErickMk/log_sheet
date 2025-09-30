@@ -41,7 +41,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 # Try multiple possible environment variable names
 # DATABASE_URL = os.getenv('DATABASE_URL') 
 # TEMPORARY TEST - hardcode the database URL
-DATABASE_URL = "postgresql://postgres.mxwhovimordatihksosb:6EuCQOWRUNmHPSfG@db.mxwhovimordatihksosb.supabase.co:5432/postgres"
+DATABASE_URL = "postgresql://postgres:6EuCQOWRUNmHPSfG@db.mxwhovimordatihksosb.supabase.co:5432/postgres"
 
 # Debug: Print what we're finding
 print(f"DEBUG: DATABASE_URL from env: {DATABASE_URL}")
