@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import dj_database_url # Keep this import
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -32,8 +33,8 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 # ===============================================
 # DATABASE CONFIGURATION (Supabase/Vercel)
 # ===============================================
-# 1. Prioritize a direct URL variable if set (e.g., in Vercel settings)
-DATABASE_URL = os.getenv('SUPABASE_DIRECT_URL')
+# 1. Prioritize the known non-pooling variable from your Vercel configuration.
+DATABASE_URL = os.getenv('POSTGRES_URL_NON_POOLING')
 
 # 2. Fallback to common Vercel/Supabase variables
 if not DATABASE_URL:
@@ -43,32 +44,24 @@ if not DATABASE_URL:
     DATABASE_URL = os.getenv('POSTGRES_PRISMA_URL') 
 
 if DATABASE_URL:
-    # --- CRITICAL FIX FOR PGBOUNCER/SUPABASE ---
+    # --- CRITICAL FINAL FIX FOR PGBOUNCER/SUPABASE ---
     
-    # Supabase project connection details (derived from your environment variables)
-    DIRECT_HOST = "db.mxwhovimordatihksosb.supabase.co"
-    DIRECT_PORT = "5432"
-    POOLER_HOST = "aws-1-us-east-1.pooler.supabase.com"
-    POOLER_PORT = "6543"
-
-    # Step 1: Strip ALL query parameters (everything after the '?')
-    # This removes 'pgbouncer=true', 'sslmode=require', etc.
+    # We strip ALL query parameters (everything after the '?') to guarantee 
+    # that 'pgbouncer=true' and 'sslmode=require' are removed, as dj-database-url 
+    # and the underlying libraries handle SSL automatically when ssl_require=True.
     if '?' in DATABASE_URL:
+        # Use only the base URI part (the DSN)
         DATABASE_URL = DATABASE_URL.split('?')[0]
     
-    # Step 2: Ensure we are using the direct host/port, not the pooler host/port.
-    # We explicitly look for the pooler host/port and replace it with the known direct details.
-    if POOLER_HOST in DATABASE_URL or POOLER_PORT in DATABASE_URL:
-        # Replace the pooler host if present
-        DATABASE_URL = DATABASE_URL.replace(POOLER_HOST, DIRECT_HOST)
-        # Replace the pooler port if present
-        DATABASE_URL = DATABASE_URL.replace(POOLER_PORT, DIRECT_PORT)
-        
+    # Optional: If the URI still contains the pooler port (6543), swap it to the direct port (5432).
+    # Based on your non-pooling URL, it already uses port 5432, but this is a safe check.
+    DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
+
     DATABASES = {
         'default': dj_database_url.parse(
             DATABASE_URL,
             conn_max_age=600,
-            ssl_require=True  # Ensure SSL is enforced
+            ssl_require=True  # Ensure SSL is enforced for PostgreSQL
         )
     }
 else:
