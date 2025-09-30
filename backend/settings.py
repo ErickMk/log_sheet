@@ -14,6 +14,9 @@ import os
 import dj_database_url
 from dotenv import load_dotenv
 
+# Load environment variables from .env file (for local development)
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -38,6 +41,11 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 # Try multiple possible environment variable names
 DATABASE_URL = os.getenv('DATABASE_URL') 
 
+# Debug: Print what we're finding
+print(f"DEBUG: DATABASE_URL from env: {DATABASE_URL}")
+print(f"DEBUG: POSTGRES_USER from env: {os.getenv('POSTGRES_USER')}")
+print(f"DEBUG: POSTGRES_HOST from env: {os.getenv('POSTGRES_HOST')}")
+
 # If no DATABASE_URL, try to build one from components
 if not DATABASE_URL:
     # Check if we have the individual Postgres components
@@ -51,10 +59,12 @@ if not DATABASE_URL:
         DATABASE_URL = f"postgresql://{pg_user}:{pg_password}@{pg_host}:5432/{pg_database}"
         print(f"Built DATABASE_URL from components using host: {pg_host}")
     else:
+        print(f"DEBUG: Missing components - user:{pg_user}, host:{pg_host}, db:{pg_database}")
         # Fallback to the provided POSTGRES_URL variables
         DATABASE_URL = os.getenv('POSTGRES_URL_NON_POOLING')
         if not DATABASE_URL:
             DATABASE_URL = os.getenv('POSTGRES_URL')
+        print(f"DEBUG: Fallback DATABASE_URL: {DATABASE_URL[:50] if DATABASE_URL else None}")
     
 # 2. Check if a valid database URL was found
 if DATABASE_URL and DATABASE_URL.strip():  # Added check for empty string
