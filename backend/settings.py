@@ -40,12 +40,18 @@ if not DATABASE_URL:
     DATABASE_URL = os.getenv('DATABASE_URL') 
 
 if DATABASE_URL:
-    # Use external PostgreSQL (Supabase) for production/deployment
+    # IMPORTANT: Supabase/Vercel URLs often include connection pooler parameters
+    # like 'pgbouncer=true' that cause psycopg2 errors.
+    # We remove these unsupported parameters manually before parsing.
+    if 'pgbouncer' in DATABASE_URL:
+        # Strip unsupported parameters like pgbouncer=true
+        DATABASE_URL = DATABASE_URL.split('?')[0]
+        
     DATABASES = {
         'default': dj_database_url.parse(
             DATABASE_URL,
             conn_max_age=600,
-            ssl_require=True  # Ensure SSL is enforced for Supabase
+            ssl_require=True  # Ensure SSL is enforced
         )
     }
 else:
