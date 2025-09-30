@@ -491,7 +491,7 @@ export const AutoLogExport: React.FC = () => {
 		console.log('Sending request to backend:', requestBody);
 		
 		try {
-			const resp = await fetch('http://localhost:8000/api/trips/', {
+			const resp = await fetch('/api/trips/', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(requestBody)
