@@ -32,39 +32,37 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 # ===============================================
 # DATABASE CONFIGURATION (Supabase/Vercel)
 # ===============================================
-# 1. We prioritize the generic DATABASE_URL for Vercel/Supabase
-DATABASE_URL = os.getenv('DATABASE_URL') 
+# 1. Prioritize a direct URL variable if set (e.g., in Vercel settings)
+DATABASE_URL = os.getenv('SUPABASE_DIRECT_URL')
 
-# 2. Fallback to POSTGRES_PRISMA_URL if DATABASE_URL is not set
+# 2. Fallback to common Vercel/Supabase variables
+if not DATABASE_URL:
+    DATABASE_URL = os.getenv('DATABASE_URL') 
+
 if not DATABASE_URL:
     DATABASE_URL = os.getenv('POSTGRES_PRISMA_URL') 
 
 if DATABASE_URL:
     # --- CRITICAL FIX FOR PGBOUNCER/SUPABASE ---
-    # The pooler URL causes "invalid connection option" and sometimes this "Tenant/User not found" 
-    # error if the credentials are tied to the Direct Host.
     
-    # We strip ALL query parameters (everything after the '?') to force Django to use a clean URI.
+    # Supabase project connection details (derived from your environment variables)
+    DIRECT_HOST = "db.mxwhovimordatihksosb.supabase.co"
+    DIRECT_PORT = "5432"
+    POOLER_HOST = "aws-1-us-east-1.pooler.supabase.com"
+    POOLER_PORT = "6543"
+
+    # Step 1: Strip ALL query parameters (everything after the '?')
+    # This removes 'pgbouncer=true', 'sslmode=require', etc.
     if '?' in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.split('?')[0]
     
-    # We explicitly change the host/port to the Direct Connection details if it still points to the pooler.
-    # We replace the pooler port (6543) with the direct port (5432) and update the host if necessary.
-    # NOTE: The direct host for your project is db.mxwhovimordatihksosb.supabase.co
-    if "pooler" in DATABASE_URL:
-        # Example fix for pooler URI being mistakenly used:
-        # Replaces 'pooler.supabase.com:6543' with the direct host 'db.yourproject.supabase.co:5432'
-        # Since we don't know your exact direct host, we will rely on stripping the pooler port
-        DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
-        
-        # If the pooler host is explicit (like in your error trace) we *must* use the direct host.
-        # This is a strong assumption based on your direct URI:
-        # db.mxwhovimordatihksosb.supabase.co
-        
-        # Let's assume the user has the correct DIRECT URL set in the Vercel variable now, 
-        # and the pooler host in the traceback is a confusing side effect.
-        # The ultimate error is FATAL: Tenant or user not found. 
-        
+    # Step 2: Ensure we are using the direct host/port, not the pooler host/port.
+    # We explicitly look for the pooler host/port and replace it with the known direct details.
+    if POOLER_HOST in DATABASE_URL or POOLER_PORT in DATABASE_URL:
+        # Replace the pooler host if present
+        DATABASE_URL = DATABASE_URL.replace(POOLER_HOST, DIRECT_HOST)
+        # Replace the pooler port if present
+        DATABASE_URL = DATABASE_URL.replace(POOLER_PORT, DIRECT_PORT)
         
     DATABASES = {
         'default': dj_database_url.parse(
