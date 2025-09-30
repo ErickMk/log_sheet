@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 from pathlib import Path
 import os
+import sys
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (for local development)
@@ -36,21 +37,57 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 # DATABASE CONFIGURATION (Direct PostgreSQL)
 # ===============================================
 
+print("=" * 60)
+print("DATABASE CONFIGURATION DEBUG")
+print("=" * 60)
+
 # Get database credentials from environment
 POSTGRES_USER = os.getenv('POSTGRES_USER')
 POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
 POSTGRES_HOST = os.getenv('POSTGRES_HOST')
 POSTGRES_DATABASE = os.getenv('POSTGRES_DATABASE', 'postgres')
 
-# Debug output
-print(f"DEBUG: POSTGRES_USER = {POSTGRES_USER}")
-print(f"DEBUG: POSTGRES_HOST = {POSTGRES_HOST}")
-print(f"DEBUG: POSTGRES_DATABASE = {POSTGRES_DATABASE}")
-print(f"DEBUG: POSTGRES_PASSWORD exists = {bool(POSTGRES_PASSWORD)}")
+# Also check for alternative environment variable names
+if not POSTGRES_USER:
+    POSTGRES_USER = os.getenv('PGUSER')
+if not POSTGRES_PASSWORD:
+    POSTGRES_PASSWORD = os.getenv('PGPASSWORD')
+if not POSTGRES_HOST:
+    POSTGRES_HOST = os.getenv('PGHOST')
+if not POSTGRES_DATABASE:
+    POSTGRES_DATABASE = os.getenv('PGDATABASE', 'postgres')
+
+# Detailed debug output
+print(f"POSTGRES_USER: {POSTGRES_USER}")
+print(f"POSTGRES_HOST: {POSTGRES_HOST}")
+print(f"POSTGRES_DATABASE: {POSTGRES_DATABASE}")
+print(f"POSTGRES_PASSWORD present: {bool(POSTGRES_PASSWORD)}")
+if POSTGRES_PASSWORD:
+    print(f"POSTGRES_PASSWORD length: {len(POSTGRES_PASSWORD)}")
+    print(f"POSTGRES_PASSWORD first 3 chars: {POSTGRES_PASSWORD[:3]}...")
+
+# Check all environment variables (useful for debugging)
+print("\nAll environment variables containing 'POSTGRES' or 'PG':")
+for key, value in os.environ.items():
+    if 'POSTGRES' in key.upper() or key.upper().startswith('PG'):
+        if 'PASSWORD' in key.upper():
+            print(f"  {key}: [REDACTED - length {len(value)}]")
+        else:
+            print(f"  {key}: {value}")
+
+print("=" * 60)
 
 # Check if we have all required PostgreSQL credentials
 if all([POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST]):
-    print("✓ All PostgreSQL credentials found - using PostgreSQL")
+    print("[SUCCESS] All PostgreSQL credentials found - configuring PostgreSQL")
+    
+    # Check if psycopg2 is available
+    try:
+        import psycopg2
+        print("[SUCCESS] psycopg2 module found")
+    except ImportError as e:
+        print(f"[ERROR] psycopg2 not found: {e}")
+        print("[INFO] You may need to add 'psycopg2-binary' to requirements.txt")
     
     DATABASES = {
         'default': {
@@ -67,12 +104,15 @@ if all([POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST]):
             }
         }
     }
+    
+    print(f"[SUCCESS] Database configured: postgresql://{POSTGRES_USER}@{POSTGRES_HOST}:5432/{POSTGRES_DATABASE}")
+    
 else:
     # Fallback to SQLite for local development
-    print("⚠ PostgreSQL credentials incomplete - falling back to SQLite")
-    print(f"  - POSTGRES_USER: {bool(POSTGRES_USER)}")
-    print(f"  - POSTGRES_PASSWORD: {bool(POSTGRES_PASSWORD)}")
-    print(f"  - POSTGRES_HOST: {bool(POSTGRES_HOST)}")
+    print("[WARNING] PostgreSQL credentials incomplete - falling back to SQLite")
+    print(f"  POSTGRES_USER present: {bool(POSTGRES_USER)}")
+    print(f"  POSTGRES_PASSWORD present: {bool(POSTGRES_PASSWORD)}")
+    print(f"  POSTGRES_HOST present: {bool(POSTGRES_HOST)}")
     
     DATABASES = {
         'default': {
@@ -80,6 +120,10 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+    print(f"[INFO] Using SQLite at: {BASE_DIR / 'db.sqlite3'}")
+
+print("=" * 60)
+print()
 
 # ===============================================
 # END DATABASE CONFIGURATION
