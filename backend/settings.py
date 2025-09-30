@@ -47,6 +47,21 @@ POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
 POSTGRES_HOST = os.getenv('POSTGRES_HOST')
 POSTGRES_DATABASE = os.getenv('POSTGRES_DATABASE', 'postgres')
 
+# CRITICAL FIX: AWS Lambda has poor IPv6 support
+# Supabase's direct host (db.*.supabase.co) resolves to IPv6
+# We need to use the pooler which has better IPv4 support
+if POSTGRES_HOST and 'db.' in POSTGRES_HOST and '.supabase.co' in POSTGRES_HOST:
+    # Extract project reference
+    project_ref = POSTGRES_HOST.replace('db.', '').replace('.supabase.co', '')
+    # Use AWS-specific pooler endpoint (IPv4-friendly)
+    POSTGRES_HOST = f'aws-0-us-east-1.pooler.supabase.com'
+    POSTGRES_PORT = '6543'  # Pooler uses port 6543
+    print(f"[FIX] Detected Supabase direct host - switching to AWS pooler")
+    print(f"[FIX] Project reference: {project_ref}")
+    print(f"[FIX] New host: {POSTGRES_HOST}:{POSTGRES_PORT}")
+else:
+    POSTGRES_PORT = '5432'  # Standard PostgreSQL port
+
 # Also check for alternative environment variable names
 if not POSTGRES_USER:
     POSTGRES_USER = os.getenv('PGUSER')
@@ -60,20 +75,12 @@ if not POSTGRES_DATABASE:
 # Detailed debug output
 print(f"POSTGRES_USER: {POSTGRES_USER}")
 print(f"POSTGRES_HOST: {POSTGRES_HOST}")
+print(f"POSTGRES_PORT: {POSTGRES_PORT}")
 print(f"POSTGRES_DATABASE: {POSTGRES_DATABASE}")
 print(f"POSTGRES_PASSWORD present: {bool(POSTGRES_PASSWORD)}")
 if POSTGRES_PASSWORD:
     print(f"POSTGRES_PASSWORD length: {len(POSTGRES_PASSWORD)}")
     print(f"POSTGRES_PASSWORD first 3 chars: {POSTGRES_PASSWORD[:3]}...")
-
-# Check all environment variables (useful for debugging)
-print("\nAll environment variables containing 'POSTGRES' or 'PG':")
-for key, value in os.environ.items():
-    if 'POSTGRES' in key.upper() or key.upper().startswith('PG'):
-        if 'PASSWORD' in key.upper():
-            print(f"  {key}: [REDACTED - length {len(value)}]")
-        else:
-            print(f"  {key}: {value}")
 
 print("=" * 60)
 
@@ -96,7 +103,7 @@ if all([POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST]):
             'USER': POSTGRES_USER,
             'PASSWORD': POSTGRES_PASSWORD,
             'HOST': POSTGRES_HOST,
-            'PORT': '5432',
+            'PORT': POSTGRES_PORT,
             'CONN_MAX_AGE': 0,  # Disable persistent connections for serverless
             'OPTIONS': {
                 'sslmode': 'require',
@@ -105,7 +112,7 @@ if all([POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST]):
         }
     }
     
-    print(f"[SUCCESS] Database configured: postgresql://{POSTGRES_USER}@{POSTGRES_HOST}:5432/{POSTGRES_DATABASE}")
+    print(f"[SUCCESS] Database configured: postgresql://{POSTGRES_USER}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DATABASE}")
     
 else:
     # Fallback to SQLite for local development
