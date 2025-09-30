@@ -1,1 +1,6 @@
 *.pdf binary
+*.PDF binary
+
+# Prevent line ending conversion for these files
+*.pdf -text
+*.PDF -text
