@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 from pathlib import Path
 import os
+import re
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (for local development)
@@ -33,66 +34,126 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 
 
 # ===============================================
-# DATABASE CONFIGURATION (Hardcoded for AWS Lambda)
+# DATABASE CONFIGURATION
 # ===============================================
 
 print("=" * 60)
 print("DATABASE CONFIGURATION")
 print("=" * 60)
 
-# Get password from environment (only dynamic value)
-POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
+# Try to use POSTGRES_URL_NON_POOLING first (best for Django on serverless)
+DATABASE_URL = os.getenv('POSTGRES_URL_NON_POOLING') or os.getenv('POSTGRES_URL')
 
-# Hardcoded values optimized for AWS Lambda / Vercel
-POSTGRES_USER = 'postgres.mxwhovimordatihksosb'
-POSTGRES_HOST = 'aws-1-us-east-1.pooler.supabase.com'
-POSTGRES_PORT = '6543'
-POSTGRES_DATABASE = 'postgres'
-
-print(f"POSTGRES_USER: {POSTGRES_USER}")
-print(f"POSTGRES_HOST: {POSTGRES_HOST}")
-print(f"POSTGRES_PORT: {POSTGRES_PORT}")
-print(f"POSTGRES_DATABASE: {POSTGRES_DATABASE}")
-print(f"POSTGRES_PASSWORD present: {bool(POSTGRES_PASSWORD)}")
-
-if POSTGRES_PASSWORD:
-    print(f"POSTGRES_PASSWORD length: {len(POSTGRES_PASSWORD)}")
-
-print("=" * 60)
-
-# Configure database if password is available
-if POSTGRES_PASSWORD:
-    print("[SUCCESS] Password found - configuring PostgreSQL with hardcoded pooler settings")
+if DATABASE_URL:
+    print(f"[INFO] Found DATABASE_URL")
     
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': POSTGRES_DATABASE,
-            'USER': POSTGRES_USER,
-            'PASSWORD': POSTGRES_PASSWORD,
-            'HOST': POSTGRES_HOST,
-            'PORT': POSTGRES_PORT,
-            'CONN_MAX_AGE': 0,  # Disable persistent connections for serverless
-            'OPTIONS': {
-                'sslmode': 'require',
-                'connect_timeout': 10,
+    # Parse the connection URL
+    # Format: postgres://user:password@host:port/database?params
+    match = re.match(r'postgres(?:ql)?://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)', DATABASE_URL)
+    
+    if match:
+        POSTGRES_USER = match.group(1)
+        POSTGRES_PASSWORD = match.group(2)
+        POSTGRES_HOST = match.group(3)
+        POSTGRES_PORT = match.group(4)
+        POSTGRES_DATABASE = match.group(5)
+        
+        print(f"POSTGRES_USER: {POSTGRES_USER}")
+        print(f"POSTGRES_HOST: {POSTGRES_HOST}")
+        print(f"POSTGRES_PORT: {POSTGRES_PORT}")
+        print(f"POSTGRES_DATABASE: {POSTGRES_DATABASE}")
+        print(f"POSTGRES_PASSWORD present: {bool(POSTGRES_PASSWORD)}")
+        
+        # CRITICAL FIX for AWS Lambda IPv6 issue:
+        # Replace the pooler hostname with direct connection hostname
+        # This ensures IPv4 connectivity
+        if 'pooler.supabase.com' in POSTGRES_HOST:
+            # Extract project reference
+            project_ref = POSTGRES_USER.split('.')[1] if '.' in POSTGRES_USER else None
+            
+            if project_ref:
+                # Use direct connection host instead of pooler
+                POSTGRES_HOST = f'db.{project_ref}.supabase.co'
+                POSTGRES_PORT = '5432'  # Direct connection uses standard port
+                print(f"[FIX] Detected pooler URL - switching to direct connection")
+                print(f"[FIX] New host: {POSTGRES_HOST}")
+                print(f"[FIX] New port: {POSTGRES_PORT}")
+            
+            # Also update username format if needed (remove project ref from username)
+            if '.' in POSTGRES_USER:
+                POSTGRES_USER = POSTGRES_USER.split('.')[0]
+                print(f"[FIX] Updated username to: {POSTGRES_USER}")
+        
+        print("=" * 60)
+        
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': POSTGRES_DATABASE,
+                'USER': POSTGRES_USER,
+                'PASSWORD': POSTGRES_PASSWORD,
+                'HOST': POSTGRES_HOST,
+                'PORT': POSTGRES_PORT,
+                'CONN_MAX_AGE': 0,
+                'OPTIONS': {
+                    'sslmode': 'require',
+                    'connect_timeout': 10,
+                }
             }
         }
-    }
-    
-    print(f"[SUCCESS] Database configured: postgresql://{POSTGRES_USER}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DATABASE}")
-    
-else:
-    # Fallback to SQLite for local development
-    print("[WARNING] POSTGRES_PASSWORD not found - falling back to SQLite")
-    
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+        
+        print(f"[SUCCESS] Database configured: postgresql://{POSTGRES_USER}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DATABASE}")
+    else:
+        print(f"[ERROR] Could not parse DATABASE_URL")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
         }
-    }
-    print(f"[INFO] Using SQLite at: {BASE_DIR / 'db.sqlite3'}")
+else:
+    # Fallback to individual environment variables
+    print("[INFO] No DATABASE_URL found, trying individual variables")
+    
+    POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
+    
+    if POSTGRES_PASSWORD:
+        # Hardcoded values for direct connection (not pooler)
+        POSTGRES_USER = 'postgres'
+        POSTGRES_HOST = 'db.mxwhovimordatihksosb.supabase.co'
+        POSTGRES_PORT = '5432'
+        POSTGRES_DATABASE = 'postgres'
+        
+        print(f"POSTGRES_USER: {POSTGRES_USER}")
+        print(f"POSTGRES_HOST: {POSTGRES_HOST}")
+        print(f"POSTGRES_PORT: {POSTGRES_PORT}")
+        print(f"POSTGRES_DATABASE: {POSTGRES_DATABASE}")
+        
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': POSTGRES_DATABASE,
+                'USER': POSTGRES_USER,
+                'PASSWORD': POSTGRES_PASSWORD,
+                'HOST': POSTGRES_HOST,
+                'PORT': POSTGRES_PORT,
+                'CONN_MAX_AGE': 0,
+                'OPTIONS': {
+                    'sslmode': 'require',
+                    'connect_timeout': 10,
+                }
+            }
+        }
+        
+        print(f"[SUCCESS] Database configured with hardcoded direct connection")
+    else:
+        print("[WARNING] No database credentials found - using SQLite")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 
 print("=" * 60)
 print()
