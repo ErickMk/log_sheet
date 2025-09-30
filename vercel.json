@@ -7,15 +7,12 @@
       "config": { "distDir": "dist" }
     },
     {
-      "src": "vercel_app.py",
-      "use": "@vercel/python"
-    },
-    {
       "src": "backend/wsgi.py",
       "use": "@vercel/python",
       "config": {
-        "maxDuration": 59,
-        "runtime": "python3.12"
+        "maxDuration": 60,
+        "runtime": "python3.12",
+        "installCommand": "pip install -r requirements.txt --break-system-packages && python manage.py migrate --noinput"
       }
     }
   ],
