@@ -35,9 +35,12 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", "your-backend-domain.c
 # ===============================================
 
 # 1. Attempt to get the database URL from the environment.
+# Try multiple possible environment variable names
 DATABASE_URL = os.getenv('DATABASE_URL') 
 if not DATABASE_URL:
     DATABASE_URL = os.getenv('POSTGRES_URL_NON_POOLING')
+if not DATABASE_URL:
+    DATABASE_URL = os.getenv('POSTGRES_URL')
     
 # 2. Check if a valid database URL was found
 if DATABASE_URL and DATABASE_URL.strip():  # Added check for empty string
@@ -47,7 +50,11 @@ if DATABASE_URL and DATABASE_URL.strip():  # Added check for empty string
             DATABASE_URL = DATABASE_URL.split('?')[0]
         
         # IMPORTANT: Replace pooling port (6543) with the direct port (5432) for Django
+        # Also handle cases where the URL uses port 6543 for pooling
         DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
+        # If using POSTGRES_URL (pooled), ensure we're using direct connection
+        if 'pooler' in DATABASE_URL or ':6543' in DATABASE_URL:
+            DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
         
         # 3. Use the parsed, cleaned URL for the default database connection.
         DATABASES = {
